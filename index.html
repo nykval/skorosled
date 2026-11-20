@@ -402,8 +402,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <p class="status" id="live-status" role="status"></p>
       <p class="status" id="live-taxonomies-status" hidden>Не удалось загрузить список пород и регионов.</p>
       <button type="button" class="button" id="live-retry" hidden>Повторить</button>
+      <button type="button" class="button" id="archive-download" hidden>Загрузить архив с сайта</button>
       <button type="button" class="button" id="archive-import" hidden>Открыть выгрузку РОРС</button>
-      <input type="file" id="archive-file" accept=".jsonl,.ndjson,.json,application/json,application/x-ndjson" hidden>
+      <input type="file" id="archive-file" accept=".jsonl,.ndjson,.json,.gz,application/json,application/x-ndjson,application/gzip" hidden>
       <p class="status" id="archive-status" role="status"></p>
     </div>
     <div class="catalog-controls">
@@ -634,6 +635,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   let favoritesOnly = false;
   let archiveView = false;
   let rorsSource = "live";
+  const hostedArchivePath = "data/rors-public.ndjson.gz";
+  let hostedArchiveAvailable = false;
+  let hostedArchiveProbe;
   let archiveLoading = false;
   let archive = null;
   let catalogPage = 0;
@@ -887,6 +891,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   async function archiveFile(file) {
+    if (/\.gz$/i.test(file.name || "")) {
+      if (typeof DecompressionStream !== "function") {
+        throw new Error("Этот браузер не поддерживает распаковку GZIP. Откройте файл NDJSON.");
+      }
+      try {
+        return await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).blob();
+      } catch {
+        throw new Error("Не удалось распаковать архив GZIP.");
+      }
+    }
     if (!/\.json$/i.test(file.name || "")) return file;
     if (file.size > 25 * 1024 * 1024) throw new Error("Для большой выгрузки используйте потоковый формат JSONL.");
     const payload = JSON.parse(await file.text());
@@ -935,13 +949,39 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     });
   }
 
+  function updateArchiveButtons() {
+    const download = byId("archive-download");
+    download.hidden = !archiveView || liveMode() || !hostedArchiveAvailable;
+    download.disabled = archiveLoading;
+    byId("archive-import").disabled = archiveLoading;
+  }
+
+  function probeHostedArchive() {
+    if (hostedArchiveProbe || !["http:", "https:"].includes(location.protocol)) return;
+    hostedArchiveProbe = fetch(hostedArchivePath, { method: "HEAD" }).then((response) => {
+      hostedArchiveAvailable = response.ok && !response.headers.get("Content-Type")?.includes("text/html");
+      updateArchiveButtons();
+    }).catch(() => { hostedArchiveProbe = null; });
+  }
+
+  async function downloadHostedArchive() {
+    await attachArchive(async () => {
+      const response = await fetch(hostedArchivePath);
+      if (!response.ok) throw new Error("Архив сейчас недоступен. Можно открыть сохранённый файл.");
+      return new File([await response.blob()], "rors-public.ndjson.gz", { type: "application/gzip" });
+    }, "Архив РОРС с сайта", true);
+  }
+
   async function attachArchive(file, name, save) {
     if (archiveLoading) return;
     archiveLoading = true;
-    byId("archive-import").disabled = true;
-    byId("archive-status").textContent = "Читаем выгрузку…";
+    updateArchiveButtons();
+    const download = typeof file === "function";
+    byId("archive-status").textContent = download ? "Скачиваем архив РОРС…" : "Читаем выгрузку…";
     try {
-      const source = await archiveFile(file);
+      const input = download ? await file() : file;
+      if (download) byId("archive-status").textContent = "Читаем выгрузку…";
+      const source = await archiveFile(input);
       archive = await indexArchive(source, (count) => {
         byId("archive-status").textContent = "Прочитано " + count.toLocaleString("ru-RU") + " записей…";
       });
@@ -957,10 +997,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       catalogPage = 0;
       if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=")) render();
     } catch (error) {
-      byId("archive-status").textContent = error.message || "Не удалось открыть выгрузку.";
+      byId("archive-status").textContent = error instanceof TypeError && download
+        ? "Не удалось скачать архив. Можно открыть сохранённый файл."
+        : error.message || "Не удалось открыть выгрузку.";
     } finally {
       archiveLoading = false;
-      byId("archive-import").disabled = false;
+      updateArchiveButtons();
     }
   }
 
@@ -1441,6 +1483,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("live-status").hidden = !online;
     byId("archive-status").hidden = online;
     byId("archive-import").hidden = online;
+    updateArchiveButtons();
+    if (archiveView && !online) probeHostedArchive();
     byId("export").textContent = archiveView ? "Скачать копию своих записей" : "Скачать копию";
     if (online && !invalidRange) {
       void renderLiveCatalog(values);
@@ -1696,6 +1740,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   byId("file-source").onclick = () => chooseRorsSource("file");
   byId("live-retry").onclick = () => { void loadLiveTaxonomies(); renderCatalog(); };
   byId("live-profile-retry").onclick = () => { if (liveRoute()) void loadLiveProfile(liveRoute()); };
+  byId("archive-download").onclick = () => { void downloadHostedArchive(); };
   byId("archive-import").onclick = () => byId("archive-file").click();
   byId("archive-file").onchange = (event) => {
     const file = event.currentTarget.files[0];
