@@ -495,6 +495,21 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </nav>
   </section>
 
+  <section id="profile-loading" class="profile-loading" hidden aria-labelledby="profile-loading-title">
+    <div class="profile-loading-mark" aria-hidden="true">
+      <img src="dog-logo.png" alt="" class="profile-loading-base" width="112" height="112">
+      <img src="dog-logo.png" alt="" class="profile-loading-fill" width="112" height="112">
+    </div>
+    <h1 id="profile-loading-title" class="sr-only">Загружаем карточку</h1>
+    <p id="profile-loading-name" class="sr-only"></p>
+    <strong id="profile-loading-percent" class="profile-loading-percent" aria-hidden="true">0%</strong>
+    <div id="profile-loading-progress" class="sr-only" role="progressbar" aria-label="Загрузка карточки собаки" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+    <p id="profile-loading-status" class="sr-only" role="status">Получаем сведения о собаке…</p>
+    <p id="profile-loading-error" class="profile-loading-error" role="alert" hidden></p>
+    <button type="button" id="profile-loading-retry" class="button primary" hidden>Повторить загрузку</button>
+
+  </section>
+
   <section id="profile" hidden>
     <a class="button subtle profile-back" href="#">К списку собак</a>
     <div class="profile-heading">
@@ -1107,6 +1122,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       archiveLoading = false;
       updateArchiveButtons();
       if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=") || currentDog()?.archiveSourceId) render();
+      document.dispatchEvent(new Event("profile-archive-ready"));
     }
   }
 
@@ -1328,17 +1344,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     return dogLink({ id, name: name || "Карточка РОРС", live: true, rors: true });
   }
 
-  async function rorsEvaluations(path, key, id, signal) {
+  async function rorsEvaluations(path, key, id, signal, onProgress = () => {}) {
     const items = [];
     const limit = 100;
     while (true) {
       const data = await rorsGet(path, {limit, offset:items.length, filters:"dog_id,==," + id}, signal);
       const page = data[key];
       if (!Array.isArray(page)) throw new Error("РОРС вернул результаты в неизвестном формате.");
-      if (!page.length) return items;
+      if (!page.length) { onProgress(1); return items; }
       items.push(...page);
-      const total = Number(data.cursor?.total_count);
-      if (Number.isFinite(total) ? items.length >= total : page.length < limit) return items;
+      const total = data.cursor?.total_count == null ? NaN : Number(data.cursor.total_count);
+      const complete = Number.isFinite(total) ? items.length >= total : page.length < limit;
+      onProgress(complete ? 1 : Number.isFinite(total) && total > 0 ? items.length / total : 0);
+      if (complete) return items;
     }
   }
 
@@ -1351,6 +1369,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
   async function loadLiveProfile(id) {
     liveDetail?.request.abort();
+    const loading = startProfileLoading();
+    const stages = [0, 0, 0, 0, 0];
+    const progress = (index, value) => {
+      stages[index] = value;
+      updateProfileLoading(loading, stages.reduce((sum, item) => sum + item, 0) * 15,
+        index ? "Загружаем родословную, потомков и результаты…" : "Получаем сведения о собаке…");
+    };
     const detail = { id, request: new AbortController(), loading: true };
     liveDetail = detail;
     const signal = detail.request.signal;
@@ -1371,29 +1396,38 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       }
       detail.parents = { father: data.dog.dog_father, mother: data.dog.dog_mother };
       detail.dog = rorsDog(data.dog);
-      renderProfile(detail.dog);
+      byId("profile-loading-name").textContent = detail.dog.name;
+      progress(0, 1);
+      const completed = (promise, index) => promise.then((value) => { progress(index, 1); return value; });
       const results = await Promise.allSettled([
-        rorsGet("/api/dog_ancestors/" + id, null, signal),
-        rorsGet("/api/dog_children/" + id, null, signal),
-        rorsEvaluations("/api/exhevals", "exhibition_evals", id, signal),
-        rorsEvaluations("/api/compevals", "competition_evals", id, signal)
+        completed(rorsGet("/api/dog_ancestors/" + id, null, signal), 1),
+        completed(rorsGet("/api/dog_children/" + id, null, signal), 2),
+        rorsEvaluations("/api/exhevals", "exhibition_evals", id, signal, (value) => progress(3, value)),
+        rorsEvaluations("/api/compevals", "competition_evals", id, signal, (value) => progress(4, value))
       ]);
       if (!active()) return;
       const [ancestors, children, exhibitions, competitions] = results.map((result) => result.value);
       detail.pedigree = Pedigree.fromApi(ancestors?.ancestors, rorsDog);
       detail.related = Pedigree.toMap(detail.pedigree);
-      detail.children = Array.isArray(children?.children) ? children.children
-        .map((item) => item?.entity ?? item?.dog ?? item)
-        .filter((item) => item && /^\d+$/.test(item.id)).map(rorsDog) : [];
+      const failed = results.map((result, index) => result.status === "rejected"
+        ? ["родословную", "потомков", "выставки", "испытания и состязания"][index] : "").filter(Boolean);
+      if (failed.length) throw new Error("Не удалось загрузить: " + failed.join(", ") + ". Повторите загрузку.");
+      if (!Array.isArray(children?.children)) throw new Error("РОРС вернул сведения о потомках в неизвестном формате.");
+      detail.children = children.children.map((item) => item?.entity ?? item?.dog ?? item)
+        .filter((item) => item && /^\d+$/.test(String(item.id))).map(rorsDog);
+      profileChildrenCache.set(id, detail.children);
       detail.events = { exhibition_evals: exhibitions, competition_evals: competitions };
       detail.partial = results.some((result) => result.status === "rejected");
       detail.loading = false;
-      renderProfile(detail.dog);
+      await renderProfile(detail.dog, { loading, base: 75 });
     } catch (error) {
       if (!active()) return;
       byId("live-profile-status").textContent = error.name === "TypeError" ? "Связь с РОРС недоступна." : error.message;
       byId("live-profile-retry").hidden = false;
       detail.loading = false;
+      detail.error = error.message;
+      failProfileLoading(loading, error.name === "TypeError" ? "Не удалось связаться с РОРС. Проверьте соединение." : error.message,
+        () => loadLiveProfile(id));
     }
   }
 
@@ -1687,7 +1721,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     return dog ? dogLink(dog) : "—";
   }
 
-  function renderProfile(dog) {
+  function renderProfile(dog, options = {}) {
+    const loading = options.loading || startProfileLoading(dog.name);
+    const base = options.base || 0;
+    const progress = (fraction) => updateProfileLoading(loading, base + fraction * (100 - base), "Проверяем данные и считаем бонитировку…");
     byId("profile-title").textContent = dog.name;
     byId("profile-title").title = dog.name;
     byId("profile-example").hidden = !dog.demo;
@@ -1706,11 +1743,20 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("live-profile-retry").hidden = true;
     if (dog.rors && dog.live) renderLiveSupplement(dog);
     renderBonitationPanel(dog);
-    renderProfileBlocks(dog);
-    if (!dog.rors && dog.archiveSourceId) {
-      void recoverCopiedPedigree(dog);
-      showCopiedPedigreeStatus(dog);
-    }
+    return (async () => {
+      if (!dog.rors && dog.archiveSourceId) {
+        await recoverCopiedPedigree(dog, options.retry === true);
+        const state = copiedPedigrees.get(dog.archiveSourceId);
+        if (state?.error && !state.tree) throw new Error(state.error);
+      }
+      await renderProfileBlocks(dog, progress);
+      finishProfileLoading(loading);
+    })().catch((error) => {
+      failProfileLoading(loading, error.message, () => {
+        if (dog.archiveSourceId && !archive) archiveLoadAttempted = false;
+        renderProfile(currentDog() || dog, { retry: true });
+      });
+    });
   }
 
   function render() {
@@ -1720,10 +1766,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       rorsSource = "live";
       liveCatalogRequest?.abort();
       byId("catalog").hidden = true;
-      byId("profile").hidden = false;
+      byId("profile").hidden = true;
       byId("clear-demo").hidden = true;
       if (liveDetail?.id !== onlineId || liveDetail.request.signal.aborted) void loadLiveProfile(onlineId);
-      else if (liveDetail.dog) renderProfile(liveDetail.dog);
+      else if (liveDetail.error) failProfileLoading(startProfileLoading(), liveDetail.error, () => loadLiveProfile(onlineId));
+      else if (liveDetail.dog && !liveDetail.loading) renderProfile(liveDetail.dog);
       return;
     }
     if (liveDetail?.loading) liveDetail.request.abort();
@@ -1740,6 +1787,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       liveCatalogRequest?.abort();
       renderProfile(dog);
     } else {
+      cancelProfileLoading();
       syncFilterOptions();
       renderCatalog();
       if (liveMode()) void loadLiveTaxonomies();

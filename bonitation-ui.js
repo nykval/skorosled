@@ -209,7 +209,7 @@ function bonTextField(text, name, type, value) {
 
 function bonTrialOptions(key, child, prior) {
   const group = Bonitation.groups[key];
-  const types = group ? [...group.profile, ...(child ? [] : group.other)] : Object.keys(Bonitation.trials);
+  const types = group ? child ? group.offspringProfile || group.profile : [...group.profile, ...group.other] : Object.keys(Bonitation.trials);
   const options = types.map((type) => [Bonitation.trials[type], type]);
   if (prior && !types.includes(prior)) options.push([Bonitation.trials[prior] + " · вне выбранного списка", prior]);
   return options;
@@ -227,7 +227,9 @@ function addBonEntry(child, data = {}) {
   }
   fields.append(bonOptionField("Вид испытаний", "type", bonTrialOptions(key, child, data.type), data.type, "Выберите вид"),
     bonOptionField("Степень диплома", "degree", Bonitation.degrees.slice(1).map((label, index) => [label, String(index + 1)]), data.degree, "Нет"));
-  fields.append(bonOptionField("Формат работы", "work", options(Bonitation.formats), data.work, "Не указан"));
+  const workOptions = child ? [[Bonitation.formats.solo, "solo"]] : options(Bonitation.formats);
+  if (child && data.work && data.work !== "solo") workOptions.push([Bonitation.formats[data.work] + " · не учитывается", data.work]);
+  fields.append(bonOptionField("Формат работы", "work", workOptions, data.work, "Не указан"));
   if (!child) fields.append(bonTextField("Дата диплома", "diplomaDate", "date", data.date),
     bonTextField("Мероприятие или номер", "reference", "text", data.reference));
   const actions = node("div", undefined, "bon-toolbar");
@@ -404,8 +406,11 @@ function validateBonitation(data) {
     throw new Error("Два диплома заполнены одинаково. Уберите дубль или укажите разные мероприятия или номера.");
   }
   if (data.offspring.some((child) => !child.name || ((child.type || child.degree || child.work)
-    && (!group.profile.includes(child.type) || !child.degree || !child.work)))) {
+    && (!(group.offspringProfile || group.profile).includes(child.type) || !child.degree || !child.work)))) {
     throw new Error("Укажите кличку потомка. Для зачёта диплома заполните профильный вид, степень и формат работы.");
+  }
+  if (data.offspring.some((child) => child.work && child.work !== "solo")) {
+    throw new Error("Для зачёта потомка нужен диплом за работу в одиночку.");
   }
   const names = data.offspring.map((child) => normalize(child.name));
   if (new Set(names).size !== names.length) throw new Error("Укажите каждого потомка один раз. Для тёзок добавьте номер документа.");

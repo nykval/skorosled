@@ -5,6 +5,55 @@ const profileChildrenCache = new Map();
 let profileRenderToken = 0;
 let descendantsResizeObserver = null;
 
+let profileLoadingSequence = 0;
+
+function startProfileLoading(name = "") {
+  const ticket = { sequence: ++profileLoadingSequence, route: location.hash, progress: 0 };
+  byId("profile").hidden = true;
+  byId("catalog").hidden = true;
+  byId("profile-loading").hidden = false;
+  byId("profile-loading-name").textContent = name;
+  byId("profile-loading-error").hidden = true;
+  byId("profile-loading-retry").hidden = true;
+  updateProfileLoading(ticket, 0, "Получаем сведения о собаке…");
+  return ticket;
+}
+
+function isProfileLoadingCurrent(ticket) {
+  return ticket?.sequence === profileLoadingSequence && ticket.route === location.hash;
+}
+
+function updateProfileLoading(ticket, progress, message) {
+  if (!isProfileLoadingCurrent(ticket)) return;
+  ticket.progress = Math.max(ticket.progress, Math.min(100, Math.round(progress)));
+  byId("profile-loading").style.setProperty("--load-progress", ticket.progress);
+  byId("profile-loading-percent").textContent = ticket.progress + "%";
+  byId("profile-loading-progress").setAttribute("aria-valuenow", String(ticket.progress));
+  if (message) byId("profile-loading-status").textContent = message;
+}
+
+function finishProfileLoading(ticket) {
+  if (!isProfileLoadingCurrent(ticket)) return;
+  updateProfileLoading(ticket, 100, "Карточка готова");
+  byId("profile-loading").hidden = true;
+  byId("profile").hidden = false;
+}
+
+function failProfileLoading(ticket, message, retry) {
+  if (!isProfileLoadingCurrent(ticket)) return;
+  byId("profile-loading-status").textContent = "Не удалось загрузить карточку полностью";
+  byId("profile-loading-error").textContent = message || "Проверьте соединение и повторите загрузку.";
+  byId("profile-loading-error").hidden = false;
+  const button = byId("profile-loading-retry");
+  button.hidden = false;
+  button.onclick = retry;
+}
+
+function cancelProfileLoading() {
+  profileLoadingSequence++;
+  byId("profile-loading").hidden = true;
+}
+
 function profileSourceId(dog) {
   return dog.rors ? String(dog.id) : dog.archiveSourceId || "";
 }
@@ -33,9 +82,9 @@ function profileChildren(dog) {
   const local = records.filter((entry) => entry.fatherId === dog.id || entry.motherId === dog.id);
   const original = id && archive?.byId.get(id);
   const fromArchive = original && !dog.live ? archive.children.get(id) || [] : [];
-  const online = id && liveDetail?.id === id ? liveDetail.children || [] : profileChildrenCache.get(id) || [];
+  const online = id && liveDetail?.id === id ? liveDetail.children || [] : [];
   const result = new Map();
-  for (const child of [...(dog.sourceChildren || []), ...fromArchive, ...online, ...local]) result.set(child.archiveSourceId || String(child.id), child);
+  for (const child of [...(dog.sourceChildren || []), ...fromArchive, ...(profileChildrenCache.get(id) || []), ...online, ...local]) result.set(child.archiveSourceId || String(child.id), child);
   return [...result.values()];
 }
 
@@ -44,7 +93,8 @@ async function loadProfileChildren(dog) {
   const id = profileSourceId(dog);
   if (children.length || !id || !dog.live && archive?.byId.has(id) || profileChildrenCache.has(id)) return children;
   const data = await rorsGet("/api/dog_children/" + id);
-  const rows = Array.isArray(data.children) ? data.children : [];
+  if (!Array.isArray(data?.children)) throw new Error("РОРС вернул сведения о потомках в неизвестном формате.");
+  const rows = data.children;
   const loaded = rows.map((entry) => entry?.entity ?? entry?.dog ?? entry)
     .filter((entry) => entry && /^\d+$/.test(String(entry.id))).map(rorsDog);
   profileChildrenCache.set(id, loaded);
@@ -250,20 +300,22 @@ function renderAutomaticBonitation(dog, relatives = [], loading = false) {
   renderProfileBonitation(dog, relatives, loading);
 }
 
-function renderProfileBlocks(dog) {
+async function renderProfileBlocks(dog, onProgress = () => {}) {
   const token = ++profileRenderToken;
-  renderBasicInformation(dog); renderProfileEvents(dog); renderProfilePedigree(dog);
   const ownId = profileSourceId(dog);
   const needsSourceArchive = !dog.rors && ownId && !archive && canLoadHostedArchive
     && (!dog.sourceEvents || dog.sourceChildren === null);
-  const needsArchive = ownId && archive?.byId.has(ownId) && !profileSourceCache.has(ownId);
-  const related = [...[pedigreeForDog(dog)?.father?.dog, pedigreeForDog(dog)?.mother?.dog].filter(Boolean), ...profileChildren(dog)];
-  renderAutomaticBonitation(dog, [], Boolean(needsArchive || related.length || needsSourceArchive && (!archiveLoadAttempted || archiveLoading) || dog.live && liveDetail?.loading));
-  if (needsSourceArchive && !archiveLoading && !archiveLoadAttempted) {
-    void attachArchive();
+  if (needsSourceArchive && (archiveLoading || !archiveLoadAttempted)) {
+    const ready = new Promise((resolve) => document.addEventListener("profile-archive-ready", resolve, { once: true }));
+    if (!archiveLoading) void attachArchive();
+    await ready;
+    if (!archive) throw new Error("Не удалось загрузить архив с результатами собаки.");
   }
-  if (needsSourceArchive && archiveLoading) return;
-  void (async () => {
+  if (!dog.live && /^\d+$/.test(ownId)) await loadProfileChildren(dog);
+  if (token !== profileRenderToken) return;
+  renderBasicInformation(dog); renderProfileEvents(dog); renderProfilePedigree(dog);
+  const related = [...[pedigreeForDog(dog)?.father?.dog, pedigreeForDog(dog)?.mother?.dog].filter(Boolean), ...profileChildren(dog)];
+  onProgress(0.1);
     await readProfileSource(dog);
     const relatives = [];
     let index = 0;
@@ -274,12 +326,10 @@ function renderProfileBlocks(dog) {
         const relative = related[index++];
         const result = await readProfileSource(relative);
         relatives.push({ ...result, child: childIds.has(profileSourceId(relative) || relative.id) });
+        onProgress(0.1 + 0.9 * relatives.length / related.length);
       }
     }));
     if (token !== profileRenderToken || currentDog()?.id !== dog.id) return;
     renderBasicInformation(dog); renderProfileEvents(dog); renderAutomaticBonitation(dog, relatives);
-  })().catch(() => {
-    if (token !== profileRenderToken) return;
-    byId("bon-auto").append(node("p", "Часть результатов недоступна. Оценка рассчитана по доступным сведениям.", "bon-muted"));
-  });
+    onProgress(1);
 }

@@ -29,8 +29,9 @@ test("does not invent work format or duplicate a multispecies diploma", () => {
 });
 test("recalculates hunting points from actual diplomas rather than event rating totals", () => {
   const tree = Pedigree.fromGraph(dog, () => null);
-  const first = P.automatic(dog, { competition_evals: [{ ...trial("лось", "II"), rating_total: 81 }] }, tree);
-  const second = P.automatic(dog, { competition_evals: [{ ...trial("лось", "I"), rating_total: 93 }] }, tree);
+  const exhibition_evals = [{ exterior_type: "отл.", common_exhibition_start_date: "2023-06-01" }];
+  const first = P.automatic(dog, { exhibition_evals, competition_evals: [{ ...trial("лось", "II"), rating_total: 81 }] }, tree);
+  const second = P.automatic(dog, { exhibition_evals, competition_evals: [{ ...trial("лось", "I"), rating_total: 93 }] }, tree);
   assert.equal(first.work.points, 35);
   assert.equal(second.work.points, 40);
   assert.equal(second.total - first.total, 5);

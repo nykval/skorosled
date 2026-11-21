@@ -106,30 +106,38 @@ const ProfileData = (() => {
       manual.set(signature, item);
     }
     if (!rawTrials.length) diplomas.push(...manual.values());
+    const exhibitions = (events.exhibition_evals || []).filter((entry) => date(entry.common_exhibition_start_date || entry.exhibition_start_date))
+      .sort((a, b) => date(b.common_exhibition_start_date || b.exhibition_start_date)
+        .localeCompare(date(a.common_exhibition_start_date || a.exhibition_start_date)));
+    const latestShow = exhibitions[0];
+    const assessmentDate = latestShow ? date(latestShow.common_exhibition_start_date || latestShow.exhibition_start_date)
+      : diplomas.map((entry) => entry.date).filter(Boolean).sort().at(-1) || "";
+    const assessmentGrade = latestShow ? grade(latestShow.exterior_type) : "";
     const lookup = Pedigree.toMap(pedigree);
     const sourceDog = pedigree?.dog || dog;
     const pairs = Bonitation.pedigreeFromRegistry(lookup.get(sourceDog.id) || sourceDog, lookup);
     const relative = (id) => relatives.find((item) => String(item.dog.id) === String(id));
     const parentData = [pedigree?.father?.dog, pedigree?.mother?.dog].map((parent) => parent && relative(parent.id));
     const parentGrades = parentData.map((parent) => Boolean(parent && ["excellent", "veryGood", "good"].includes(bestGrade(parent.dog, parent.events))));
-    const parentDiplomas = parentData.map((parent) => Boolean(parent && (parent.events?.competition_evals || []).some((entry) => trialDiploma(entry, group))));
-    const dates = [...(events.exhibition_evals || []).map((entry) => date(entry.common_exhibition_start_date || entry.exhibition_start_date)), ...diplomas.map((entry) => entry.date)].filter(Boolean).sort();
-    const assessmentDate = dates.at(-1) || "";
+    const parentDiplomas = parentData.map((parent) => Boolean(parent && (parent.events?.competition_evals || [])
+      .some((entry) => ["I", "II", "III"].includes(text(entry.diploma).toUpperCase())
+        && (!assessmentDate || !date(entry.start_date) || date(entry.start_date) <= assessmentDate))));
     const offspring = relatives.filter((item) => item.child && (!assessmentDate || !item.dog.birth || item.dog.birth < assessmentDate)).map((item) => {
       const diploma = (item.events?.competition_evals || []).map((entry) => trialDiploma(entry, group))
-        .filter((entry) => entry && Bonitation.groups[group].profile.includes(entry.type)
+        .filter((entry) => entry && entry.work === "solo"
+          && (Bonitation.groups[group].offspringProfile || Bonitation.groups[group].profile).includes(entry.type)
           && (!assessmentDate || entry.date && entry.date <= assessmentDate)).sort((a, b) => a.degree - b.degree)[0];
       const shows = (item.events?.exhibition_evals || []).filter((entry) => !assessmentDate
         || date(entry.common_exhibition_start_date || entry.exhibition_start_date) && date(entry.common_exhibition_start_date || entry.exhibition_start_date) <= assessmentDate);
       return diploma && { ...diploma, name: item.dog.name, grade: bestGrade(assessmentDate ? { ...item.dog, exterior: "" } : item.dog, { exhibition_evals: shows }) };
     }).filter(Boolean);
-    const input = { group, grade: bestGrade(dog, events), date: assessmentDate, documents: dog.regNumber ? "rors" : "", nationalBook: "", pairs, parents: [...parentGrades, ...parentDiplomas], diplomas, offspring };
+    const input = { group, grade: assessmentGrade, date: assessmentDate, documents: dog.regNumber ? "rors" : "", nationalBook: "", pairs, parents: [...parentGrades, ...parentDiplomas], diplomas, offspring };
     const result = Bonitation.calculate(input, dog);
     const scored = result.candidates.filter((candidate) => candidate.work).sort((a, b) => b.work.points - a.work.points);
     const current = result.qualified || scored[0];
     const work = current?.work || null;
     const missing = [];
-    if (!input.grade) missing.push("Нет оценки экстерьера.");
+    if (!input.grade) missing.push("Нет оценки экстерьера на конкретной выставке. Лучшая оценка из базы её не заменяет.");
     if (!diplomas.length) missing.push("Нет дипломов с известными видом испытаний, степенью и форматом работы.");
     if (pairs.some((amount, index) => amount < 2 ** index)) missing.push("Родословная заполнена не полностью.");
     const skipped = rawTrials.filter((entry) => ["I", "II", "III"].includes(text(entry.diploma).toUpperCase()) && !trialDiploma(entry, group)).length;

@@ -49,3 +49,17 @@
   .trials-frame { overflow-x: auto; }
   .trials-table { min-width: 620px; }
 }
+
+.profile-loading { --load-progress: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; width: 100%; padding: 24px; text-align: center; }
+body:has(#profile-loading:not([hidden])) .topbar,
+body:has(#profile-loading:not([hidden])) .footer { display: none; }
+body:has(#profile-loading:not([hidden])) main { display: grid; place-items: center; min-height: 100svh; padding-block: 0; }
+.profile-loading-mark { position: relative; width: 112px; height: 112px; }
+.profile-loading-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.profile-loading-base { filter: grayscale(1); opacity: .18; }
+.profile-loading-fill { clip-path: inset(calc((100 - var(--load-progress)) * 1%) 0 0); transition: clip-path .3s ease; }
+.profile-loading-percent { color: var(--green); font-size: 1.75rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.profile-loading-error { color: var(--danger); max-width: 440px; font-size: .95rem; }
+@media (prefers-reduced-motion: reduce) {
+  .profile-loading-fill { transition: none; }
+}

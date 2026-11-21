@@ -37,8 +37,8 @@ const Bonitation = (() => {
     asian: { label: "Афганские охотничьи борзые, тазы, тайганы", profile: ["coursing"], other: ["wolf"] },
     hound: { label: "Русские, русские пегие и эстонские гончие", profile: houndGame, other: [], hound: true },
     western: { label: "Западные гончие", profile: houndGame, other: ["penBoar", "blood", "waterfowl"], hound: true },
-    laika: { label: "Лайки", profile: laikaProfiles, other: laikaAdditional, versatility: 4 },
-    eastLaika: { label: "Восточносибирские лайки", profile: laikaProfiles, other: laikaAdditional, versatility: 4 },
+    laika: { label: "Лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4 },
+    eastLaika: { label: "Восточносибирские лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4 },
     earth: { label: "Норные", profile: terrierProfiles, other: ["penBoar", "penBadger", "blood", "waterfowl"], versatility: 4 },
     island: { label: "Островные легавые", profile: pointers, other: [] },
     continental: { label: "Континентальные легавые", profile: pointers, other: ["waterfowl", "penBadger", "blood", "penBoar"], versatility: 4 },
@@ -280,7 +280,8 @@ const Bonitation = (() => {
   function offspringScores(offspring, group, date) {
     // Resolution No. 152 moved П-shaped fox trials into the profile column of Appendix 9.
     return offspring.filter((child) => gradeValue[child.grade] > 0 && child.work === "solo"
-      && group.profile.includes(child.type) && child.degree > 0
+      && (group.offspringProfile || group.profile).includes(child.type) && child.degree >= 1 && child.degree <= 3
+      && (!date || !child.date || child.date <= date)
       && (child.type !== "foxP" || !date || date >= "2022-02-16"))
       .map((child) => ({ ...child, points: gradeValue[child.grade] + (4 - child.degree) * (group.hound && child.type === "hare" ? 2 : 1) }))
       .sort((a, b) => b.points - a.points).slice(0, 6);
