@@ -397,12 +397,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="archive-tools" id="archive-tools" hidden>
       <div class="archive-source" role="group" aria-label="Источник данных РОРС">
         <button type="button" class="button" id="live-source" aria-pressed="true">Онлайн</button>
-        <button type="button" class="button" id="file-source" aria-pressed="false">Из файла</button>
+        <button type="button" class="button" id="file-source" aria-pressed="false">Архив</button>
       </div>
       <p class="status" id="live-status" role="status"></p>
       <p class="status" id="live-taxonomies-status" hidden>Не удалось загрузить список пород и регионов.</p>
       <button type="button" class="button" id="live-retry" hidden>Повторить</button>
-      <button type="button" class="button" id="archive-download" hidden>Загрузить архив с сайта</button>
+      <button type="button" class="button" id="archive-retry" hidden>Повторить загрузку архива</button>
       <button type="button" class="button" id="archive-import" hidden>Открыть выгрузку РОРС</button>
       <input type="file" id="archive-file" accept=".jsonl,.ndjson,.json,.gz,application/json,application/x-ndjson,application/gzip" hidden>
       <p class="status" id="archive-status" role="status"></p>
@@ -634,11 +634,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   let readFailed = false;
   let favoritesOnly = false;
   let archiveView = false;
-  let rorsSource = "live";
-  const hostedArchivePath = "data/rors-public.ndjson.gz";
-  let hostedArchiveAvailable = false;
-  let hostedArchiveProbe;
+  const hostedArchivePath = "data/rors-public-2026-11-20.ndjson.gz";
+  const hostedArchiveName = "Архив РОРС от 20.11.2026";
+  const canLoadHostedArchive = ["http:", "https:"].includes(location.protocol);
+  let rorsSource = canLoadHostedArchive ? "file" : "live";
   let archiveLoading = false;
+  let archiveLoadAttempted = false;
+  let archiveLoadError = false;
   let archive = null;
   let catalogPage = 0;
   let catalogPageCount = 1;
@@ -927,7 +929,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     return new Blob(rows.map((row) => JSON.stringify(row) + "\n"), { type: "application/x-ndjson" });
   }
 
-  function archiveStorage(mode, value) {
+  function archiveStorage(mode, value, fileKey = "current") {
     return new Promise((resolve, reject) => {
       const open = indexedDB.open("skorosled-rors", 1);
       open.onupgradeneeded = () => open.result.createObjectStore("files");
@@ -942,7 +944,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         if (blocked) { db.close(); return; }
         const transaction = db.transaction("files", mode);
         const store = transaction.objectStore("files");
-        const request = mode === "readonly" ? store.get("current") : store.put(value, "current");
+        const request = mode === "readonly" ? store.get(fileKey) : store.put(value, fileKey);
         transaction.oncomplete = () => { db.close(); resolve(request.result); };
         transaction.onabort = () => { db.close(); reject(transaction.error || new Error("Файл не сохранился.")); };
       };
@@ -950,59 +952,97 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   function updateArchiveButtons() {
-    const download = byId("archive-download");
-    download.hidden = !archiveView || liveMode() || !hostedArchiveAvailable;
-    download.disabled = archiveLoading;
     byId("archive-import").disabled = archiveLoading;
+    byId("archive-retry").hidden = !archiveView || liveMode() || !archiveLoadError || !canLoadHostedArchive;
   }
 
-  function probeHostedArchive() {
-    if (hostedArchiveProbe || !["http:", "https:"].includes(location.protocol)) return;
-    hostedArchiveProbe = fetch(hostedArchivePath, { method: "HEAD" }).then((response) => {
-      hostedArchiveAvailable = response.ok && !response.headers.get("Content-Type")?.includes("text/html");
-      updateArchiveButtons();
-    }).catch(() => { hostedArchiveProbe = null; });
+  async function readSavedArchive(fileKey) {
+    return archiveStorage("readonly", undefined, fileKey).catch(() => null);
   }
 
-  async function downloadHostedArchive() {
-    await attachArchive(async () => {
-      const response = await fetch(hostedArchivePath);
-      if (!response.ok) throw new Error("Архив сейчас недоступен. Можно открыть сохранённый файл.");
-      return new File([await response.blob()], "rors-public.ndjson.gz", { type: "application/gzip" });
-    }, "Архив РОРС с сайта", true);
+  async function fetchHostedArchive() {
+    const request = new AbortController();
+    const timeout = setTimeout(() => request.abort(), 120000);
+    try {
+      const response = await fetch(hostedArchivePath, { signal: request.signal });
+      if (!response.ok || response.headers.get("Content-Type")?.includes("text/html")) {
+        throw new Error("Архив сайта сейчас недоступен.");
+      }
+      return new File([await response.blob()], hostedArchivePath.split("/").pop(), { type: "application/gzip" });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  function indexArchiveWithProgress(file) {
+    byId("archive-status").textContent = "Читаем выгрузку РОРС…";
+    return indexArchive(file, (count) => {
+      byId("archive-status").textContent = "Прочитано " + count.toLocaleString("ru-RU") + " записей…";
+    });
+  }
+
+  async function loadHostedArchive() {
+    const cached = await readSavedArchive(hostedArchivePath);
+    if (cached?.file) {
+      try {
+        return await indexArchiveWithProgress(await archiveFile(cached.file));
+      } catch {
+        // A broken browser copy can be replaced by downloading the archive again.
+      }
+    }
+    byId("archive-status").textContent = "Скачиваем архив РОРС…";
+    const file = await fetchHostedArchive();
+    const indexed = await indexArchiveWithProgress(await archiveFile(file));
+    await archiveStorage("readwrite", { file }, hostedArchivePath).catch(() => {});
+    return indexed;
   }
 
   async function attachArchive(file, name, save) {
     if (archiveLoading) return;
+    const automatic = !file;
     archiveLoading = true;
+    archiveLoadAttempted = true;
+    archiveLoadError = false;
     updateArchiveButtons();
-    const download = typeof file === "function";
-    byId("archive-status").textContent = download ? "Скачиваем архив РОРС…" : "Читаем выгрузку…";
+    byId("archive-status").textContent = automatic ? "Открываем архив РОРС…" : "Читаем выгрузку…";
     try {
-      const input = download ? await file() : file;
-      if (download) byId("archive-status").textContent = "Читаем выгрузку…";
-      const source = await archiveFile(input);
-      archive = await indexArchive(source, (count) => {
-        byId("archive-status").textContent = "Прочитано " + count.toLocaleString("ru-RU") + " записей…";
-      });
       let note = name || "Локальная выгрузка";
-      if (save) {
-        try {
-          await archiveStorage("readwrite", { file: source, name: note });
-        } catch {
-          note += " · Открыта до закрытия вкладки.";
+      if (automatic) {
+        const saved = await readSavedArchive();
+        if (saved?.file) {
+          try {
+            archive = await indexArchiveWithProgress(saved.file);
+            note = saved.name || note;
+          } catch (error) {
+            if (!canLoadHostedArchive) throw error;
+          }
+        }
+        if (!archive && canLoadHostedArchive) {
+          archive = await loadHostedArchive();
+          note = hostedArchiveName;
+        }
+      } else {
+        const source = await archiveFile(file);
+        archive = await indexArchiveWithProgress(source);
+        if (save) {
+          try {
+            await archiveStorage("readwrite", { file: source, name: note });
+          } catch {
+            note += " · Открыта до закрытия вкладки.";
+          }
         }
       }
-      byId("archive-status").textContent = note;
+      byId("archive-status").textContent = archive ? note : "";
       catalogPage = 0;
-      if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=")) render();
     } catch (error) {
-      byId("archive-status").textContent = error instanceof TypeError && download
-        ? "Не удалось скачать архив. Можно открыть сохранённый файл."
+      archiveLoadError = automatic && !archive;
+      byId("archive-status").textContent = automatic && canLoadHostedArchive
+        ? "Не удалось открыть архив сайта. Повторите загрузку, выберите файл или откройте базу онлайн."
         : error.message || "Не удалось открыть выгрузку.";
     } finally {
       archiveLoading = false;
       updateArchiveButtons();
+      if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=")) render();
     }
   }
 
@@ -1484,7 +1524,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("archive-status").hidden = online;
     byId("archive-import").hidden = online;
     updateArchiveButtons();
-    if (archiveView && !online) probeHostedArchive();
+    if (archiveView && !online && !archiveLoadAttempted) void attachArchive();
     byId("export").textContent = archiveView ? "Скачать копию своих записей" : "Скачать копию";
     if (online && !invalidRange) {
       void renderLiveCatalog(values);
@@ -1501,7 +1541,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const start = catalogPage * pageSize;
     const narrowed = Object.keys(filterLabels).some((field) => values[field]);
     const empty = invalidRange ? "Уточните даты рождения в фильтрах."
-      : archiveView && !archive ? "Выберите выгрузку РОРС в формате JSONL или JSON."
+      : archiveView && !archive ? archiveLoading ? "Загружаем каталог РОРС…"
+        : "Выберите файл выгрузки или переключитесь на онлайн-базу."
       : !dogs.length ? "Добавьте первую собаку в реестр."
       : favoritesOnly && !narrowed ? "Пока нет избранных собак." : "По этому запросу собак не найдено.";
     showCatalogPage(visible.slice(start, start + pageSize), visible.length, empty);
@@ -1740,7 +1781,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   byId("file-source").onclick = () => chooseRorsSource("file");
   byId("live-retry").onclick = () => { void loadLiveTaxonomies(); renderCatalog(); };
   byId("live-profile-retry").onclick = () => { if (liveRoute()) void loadLiveProfile(liveRoute()); };
-  byId("archive-download").onclick = () => { void downloadHostedArchive(); };
+  byId("archive-retry").onclick = () => { void attachArchive(); };
   byId("archive-import").onclick = () => byId("archive-file").click();
   byId("archive-file").onchange = (event) => {
     const file = event.currentTarget.files[0];
@@ -1805,9 +1846,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   mountBonitation();
   startStorage();
   render();
-  archiveStorage("readonly").then((saved) => {
-    if (saved?.file && !archive && !archiveLoading) return attachArchive(saved.file, saved.name, false);
-  }).catch(() => {});
 </script>
 </body>
 </html>
