@@ -1,0 +1,43 @@
+.pedigree-panel { margin-top: 18px; padding: clamp(14px, 3vw, 22px); border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+.pedigree-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pedigree-header h2 { font-size: 1.35rem; }
+.pedigree-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
+.pedigree-navigation .button { min-height: 44px; }
+.pedigree-help { margin: 8px 0 18px; color: var(--muted); font-size: .9rem; }
+.pedigree-switch { display: none; }
+.pedigree-tree { --tree-line: #afc1aa; }
+.pedigree-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 12px; border: 1px solid #cedcca; border-radius: 10px; background: #fbfcf9; }
+.pedigree-role, .pedigree-meta { color: var(--muted); font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; }
+.pedigree-role { font-weight: 650; }
+.pedigree-card .pedigree-name { display: flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--green); font-size: 1rem; font-weight: 700; line-height: 1.35; text-decoration: none; overflow-wrap: anywhere; }
+.pedigree-card .pedigree-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pedigree-expand { min-height: 44px; margin-top: 3px; padding: 6px 12px; font-size: .875rem; }
+.pedigree-root { width: min(100%, 380px); margin: 0 auto 28px; border-color: #9ab392; background: var(--green-light); }
+.pedigree-root::after { content: ""; position: absolute; top: 100%; left: 50%; height: 28px; border-left: 2px solid var(--tree-line); }
+.pedigree-branches, .pedigree-grandparents { display: grid; padding: 0; list-style: none; }
+.pedigree-branches { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.pedigree-branch { position: relative; min-width: 0; padding-top: 16px; }
+.pedigree-branch::before { content: ""; position: absolute; top: 0; left: 50%; height: 16px; border-left: 2px solid var(--tree-line); }
+.pedigree-branch::after { content: ""; position: absolute; top: 0; left: -12px; width: calc(50% + 12px); border-top: 2px solid var(--tree-line); }
+.pedigree-branch:first-child::after { left: 50%; }
+.pedigree-grandparents { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 24px 0 0; }
+.pedigree-parent:has(+ .pedigree-grandparents)::after { content: ""; position: absolute; top: 100%; left: 50%; height: 12px; border-left: 2px solid var(--tree-line); }
+.pedigree-grandparent { position: relative; min-width: 0; padding-top: 0; }
+.pedigree-grandparent::before { content: ""; position: absolute; top: -12px; left: 50%; height: 12px; border-left: 2px solid var(--tree-line); }
+.pedigree-grandparent::after { content: ""; position: absolute; top: -12px; left: -6px; width: calc(50% + 6px); border-top: 2px solid var(--tree-line); }
+.pedigree-grandparent:first-child::after { left: 50%; }
+.pedigree-unknown { border-style: dashed; background: transparent; }
+.pedigree-missing { display: flex; align-items: center; min-height: 44px; color: var(--muted); font-size: .95rem; }
+@media (max-width: 650px) {
+  .pedigree-switch { display: flex; gap: 4px; margin: 0 0 18px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: #e9eee5; }
+  .pedigree-switch .button { flex: 1; min-height: 44px; border-color: transparent; background: transparent; }
+  .pedigree-switch .button[aria-pressed="true"] { border-color: #c6d5c2; background: var(--paper); }
+  .pedigree-branches { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .pedigree-branch { display: none; padding-top: 0; }
+  .pedigree-tree[data-side="father"] .pedigree-branch[data-side="father"],
+  .pedigree-tree[data-side="mother"] .pedigree-branch[data-side="mother"] { display: block; }
+  .pedigree-branch::before, .pedigree-branch::after { display: none; }
+  .pedigree-root { width: 100%; margin-bottom: 24px; }
+  .pedigree-root::after { height: 24px; }
+  .pedigree-card { padding: 10px; }
+}

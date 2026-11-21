@@ -1,0 +1,11 @@
+.bon-panel > h2 { margin-bottom: 12px; }
+.bon-profile-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.bon-profile-summary .bon-auto-total { margin: 0; }
+.bon-profile-class { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.bon-profile-class .bon-muted { font-size: .875rem; }
+.bon-profile-open { margin-top: 20px; }
+#bon-editor > .bon-history-details { margin: 20px 0 0; }
+@media (max-width: 420px) {
+  .bon-profile-class { align-items: flex-start; }
+  .bon-profile-open { width: 100%; }
+}

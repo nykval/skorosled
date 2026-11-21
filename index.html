@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>СкороСлед — реестр собак</title>
-<link rel="icon" type="image/png" href="laika-logo.png">
+<title>Аккерман — реестр собак</title>
+<link rel="icon" type="image/png" href="dog-logo.png">
+<link rel="stylesheet" href="pedigree.css">
+<link rel="stylesheet" href="profile.css">
+<link rel="stylesheet" href="bonitation-profile.css">
+<link rel="stylesheet" href="profile-design.css">
 <style>
   :root {
     color-scheme: light;
@@ -121,9 +125,6 @@
   .archive-event-group { margin-top: 15px; }
   .archive-event-group h2 { font-size: 1.05rem; }
   .archive-event-group ul { margin: 5px 0 0; padding-inline-start: 20px; }
-  .archive-details { margin-top: 14px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
-  .archive-details summary { cursor: pointer; color: var(--green); font-weight: 650; }
-  .archive-details pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .82rem; }
   .source-link { color: var(--green); text-underline-offset: 3px; }
   .table-frame { border: 1px solid var(--line); border-radius: 13px; background: var(--paper); overflow: hidden; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -138,7 +139,7 @@
   .catalog-table tbody tr + tr, .profile-table tr + tr { border-top: 1px solid #e6ebe4; }
   .catalog-table tbody tr:hover { background: #f7f9f5; }
   .catalog-table td { font-size: .93rem; }
-  .dog-name { display: inline-flex; align-items: center; min-height: 40px; color: var(--green); font-weight: 700; text-decoration: none; }
+  .dog-name { display: inline-block; max-width: 100%; min-height: 40px; padding-block: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; color: var(--green); font-weight: 700; text-decoration: none; }
   .dog-name:hover { text-decoration: underline; text-underline-offset: 3px; }
   .demo { display: block; width: fit-content; font-size: .72rem; font-weight: 500; color: var(--muted); }
   .sex { display: inline-block; border-radius: 7px; padding: 2px 7px; background: #e9efe5; color: #3b5439; font-size: .83rem; font-weight: 650; }
@@ -150,16 +151,19 @@
   .empty { padding: 23px 16px; text-align: center; color: var(--muted); }
   .notice, .form-error { padding: 10px 13px; margin: 0 0 14px; border-radius: 9px; background: #fbf0df; color: #684b2d; }
 
-  .profile-heading { margin: 10px 0 17px; }
+  .profile-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 10px 0 17px; }
+  .profile-identity { flex: 1 1 240px; min-width: 0; }
+  #profile-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .profile-actions, .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .profile-actions { margin-top: 16px; }
+  .profile-actions { justify-content: flex-end; margin-left: auto; }
+  .profile-actions .star { flex: none; width: 42px; height: 42px; }
   .profile-table th { width: 37%; color: #3e563d; background: #edf2e9; font-size: .9rem; font-weight: 700; }
   .profile-table td { vertical-align: top; }
   .profile-table td p { white-space: pre-wrap; }
   .profile-table a { color: var(--green); font-weight: 650; text-underline-offset: 3px; }
   .profile-table ul { margin: 0; padding-inline-start: 18px; }
   .relation-list { display: flex; align-items: start; flex-wrap: wrap; gap: 5px 14px; }
-  .footer { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .footer { margin-top: 24px; }
   .footer-actions { display: flex; flex-wrap: wrap; gap: 0 16px; }
   .status { display: block; color: var(--muted); font-size: .88rem; margin-top: 4px; }
   dialog { width: min(650px, calc(100% - 20px)); max-height: calc(100dvh - 28px); padding: 19px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--paper); }
@@ -208,8 +212,8 @@
     }
     .catalog-table th, .catalog-table td { padding: 0; }
     .identity, .breed-cell { grid-column: 1 / -1; }
-    .identity { padding-right: 44px !important; }
-    .dog-name { min-height: 33px; font-size: 1.1rem; }
+    .identity { min-width: 0; padding-right: 44px !important; }
+    .dog-name { min-height: 33px; padding-block: 3px; font-size: 1.1rem; }
     .mobile-label { display: block; color: var(--muted); font-size: .75rem; }
     .catalog-table .star-cell { position: absolute; top: 11px; right: 11px; }
   }
@@ -379,7 +383,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 </svg>
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="#" id="home"><img src="laika-logo.png" width="40" height="40" alt="">СкороСлед</a>
+    <a class="brand" href="#" id="home"><img src="dog-logo.png" width="40" height="40" alt="">Аккерман</a>
     <button type="button" class="button primary" id="add"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-plus"/></svg><span class="desktop-add">Добавить собаку</span><span class="mobile-add">Добавить</span></button>
   </div>
 </header>
@@ -492,34 +496,58 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   </section>
 
   <section id="profile" hidden>
-    <a class="button subtle" href="#">К списку собак</a>
-    <div class="profile-heading"><h1 id="profile-title" tabindex="-1"></h1><p id="profile-example" class="count" hidden>Демонстрационная запись</p></div>
-    <div class="table-frame">
-      <table class="profile-table" aria-label="Сведения о собаке"><tbody id="details"></tbody></table>
+    <a class="button subtle profile-back" href="#">К списку собак</a>
+    <div class="profile-heading">
+      <div class="profile-identity"><p class="profile-eyebrow">Карточка собаки</p><h1 id="profile-title" tabindex="-1"></h1><div class="profile-meta" id="profile-meta"></div><p id="profile-example" class="count" hidden>Демонстрационная запись</p></div>
+      <button type="button" class="button star" id="favorite"></button>
+      <div class="profile-actions" id="profile-actions">
+        <button type="button" class="button primary" id="edit">Редактировать</button>
+        <button type="button" class="button danger" id="remove">Удалить</button>
+      </div>
     </div>
-    <div id="archive-events"></div>
+    <nav class="profile-jump-nav" aria-label="Разделы карточки">
+      <button type="button" data-target="profile-information" data-icon="information">Информация</button>
+      <button type="button" data-target="profile-family" data-icon="pedigree">Родословная</button>
+      <button type="button" data-target="profile-shows" data-icon="trophy">Выставки</button>
+      <button type="button" data-target="profile-work" data-icon="activity">Испытания</button>
+    </nav>
+    <section class="profile-block bon-panel" id="bon-panel" aria-labelledby="bon-title" hidden>
+      <h2 id="bon-title">Баллы бонитировки</h2>
+      <div id="bon-auto" aria-live="polite"></div>
+
+    </section>
+    <section class="profile-block" id="profile-information" aria-labelledby="basic-title">
+      <h2 id="basic-title">Основная информация</h2>
+      <div class="profile-information" id="details"></div>
+    </section>
+    <section class="profile-block" id="profile-family" aria-labelledby="pedigree-title">
+      <h2 id="pedigree-title">Родословная</h2>
+      <div id="profile-pedigree"></div>
+    </section>
+    <section class="profile-block" id="profile-shows" aria-labelledby="exhibitions-title">
+      <h2 id="exhibitions-title">Выставки и выводки</h2>
+      <div class="table-frame" id="profile-exhibitions-table" hidden>
+        <table class="event-table" aria-label="Выставки и выводки"><thead><tr><th scope="col">Мероприятие</th><th scope="col">Дата</th><th scope="col">Оценка</th></tr></thead><tbody id="profile-exhibitions"></tbody></table>
+      </div>
+      <p class="profile-empty" id="profile-exhibitions-empty"></p>
+    </section>
+    <section class="profile-block" id="profile-work" aria-labelledby="trials-title">
+      <h2 id="trials-title">Испытания и состязания</h2>
+      <div class="table-frame trials-frame" id="profile-trials-table" hidden>
+        <table class="event-table trials-table" aria-label="Испытания и состязания"><thead><tr><th scope="col">Мероприятие</th><th scope="col">Дата</th><th scope="col">Вид испытаний</th><th scope="col">Результат</th></tr></thead><tbody id="profile-trials"></tbody></table>
+      </div>
+      <p class="profile-empty" id="profile-trials-empty"></p>
+      <p class="profile-events-note" id="profile-achievements" hidden></p>
+    </section>
+    <div id="archive-events" hidden></div>
     <p class="count" id="live-profile-status" role="status"></p>
     <button type="button" class="button subtle" id="live-profile-retry" hidden>Повторить загрузку</button>
-    <details class="archive-details" id="archive-details" hidden>
-      <summary>Все поля из выгрузки</summary>
-      <pre id="archive-full"></pre>
-    </details>
-    <p class="count" id="source-reference" hidden><a class="source-link" id="source-link" target="_blank" rel="noopener noreferrer">Карточка в БОС РОРС</a></p>
-    <div class="profile-actions" id="profile-actions">
-      <button type="button" class="button primary" id="edit">Редактировать</button>
-      <button type="button" class="button" id="favorite"></button>
-      <button type="button" class="button danger" id="remove">Удалить</button>
-    </div>
-    <section class="bon-panel" id="bon-panel" aria-labelledby="bon-title" hidden>
-      <div class="bon-head"><h2 id="bon-title">Бонитировка</h2><button class="button" type="button" id="bon-new"></button></div>
-      <div id="bon-history"></div>
-    </section>
   </section>
 
   <footer class="footer">
     <div class="footer-actions">
-      <button type="button" class="button subtle" id="export">Скачать копию</button>
-      <button type="button" class="button subtle" id="import">Импортировать записи</button>
+      <button type="button" class="button subtle" id="export" hidden>Скачать копию</button>
+      <button type="button" class="button subtle" id="import" hidden>Импортировать записи</button>
       <button type="button" class="button subtle" id="clear-demo">Удалить примеры</button>
     </div>
     <input type="file" id="import-file" accept=".json,application/json" hidden>
@@ -535,6 +563,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <label>Порода<input name="breed" list="breeds-list" required maxlength="100"><datalist id="breeds-list"></datalist></label>
       <label>Пол<select name="sex"><option value="male">Кобель</option><option value="female">Сука</option></select></label>
       <label>Дата рождения<input type="date" name="birth"></label>
+      <label>Страна<input name="country" maxlength="100"></label>
       <label>Регион<input name="region" maxlength="100"></label>
       <label>Окрас<input name="color" maxlength="100"></label>
       <label>Владелец<input name="owner" maxlength="100"></label>
@@ -557,7 +586,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <form id="bon-form">
     <div class="dialog-head"><h2 id="bon-edit-title">Бонитировка</h2><button class="button" type="button" id="bon-close" aria-label="Закрыть">×</button></div>
     <div class="form-grid">
-      <label>Название выставки<input name="show" maxlength="160" required list="bon-shows" autofocus><datalist id="bon-shows"></datalist></label>
+      <label>Название расчёта или выставки<input name="show" maxlength="160" required list="bon-shows" autofocus><datalist id="bon-shows"></datalist></label>
       <label>Дата экспертизы<input type="date" name="date" required></label>
       <label class="wide">Группа пород по РОРС<select name="group" required></select></label>
       <label>Экстерьер на этой выставке<select name="grade"></select></label>
@@ -586,15 +615,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <p class="bon-muted">По одной строке на потомка. Укажите его подтверждённую оценку и лучший профильный диплом в одиночку, полученные к выставке.</p>
       <div id="bon-offspring"></div><button class="button" type="button" id="bon-add-offspring">Добавить потомка</button>
     </fieldset>
-    <section id="bon-result" class="bon-result" aria-label="Результат расчёта"></section>
+    <div class="bon-toolbar"><button class="button" type="button" id="bon-recalculate">Пересчитать бонитировку</button><span id="bon-recalculated" class="bon-muted" role="status"></span></div>
+    <section id="bon-result" class="bon-result" aria-label="Результат расчёта" aria-live="polite"></section>
     <p class="bon-muted bon-source">Расчёт по <a class="source-link" href="https://rors-os.ru/vistavki/" target="_blank" rel="noopener noreferrer">правилам РОРС</a>. Класс на выставке определяет эксперт.</p>
     <p id="bon-error" class="form-error" role="alert" hidden></p>
     <div class="form-actions bon-actions"><button class="button danger" type="button" id="bon-delete" hidden>Удалить расчёт</button><button class="button" type="button" id="bon-cancel">Закрыть</button><button class="button primary" type="submit">Сохранить расчёт</button></div>
   </form>
+      <details class="bon-history-details">
+        <summary>Расчёты по выставкам</summary>
+        <div class="bon-head"><p class="bon-muted">Сохранённые расчёты и планирование</p><button class="button" type="button" id="bon-new"></button></div>
+        <div id="bon-history"></div>
+      </details>
 </dialog>
 
+<script src="pedigree.js"></script>
 <script src="bonitation.js"></script>
 <script src="bonitation-ui.js"></script>
+<script src="profile-data.js"></script>
+<script src="profile-design.js"></script>
+<script src="profile-ui.js"></script>
+<script src="bonitation-profile.js"></script>
 <script>
   "use strict";
 
@@ -604,7 +644,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     name: "", breed: "", sex: "male", birth: "", region: "", color: "", regNumber: "",
     owner: "", pedigreeNumber: "", originNumber: "", certificateNumber: "", tattooNumber: "",
     fatherId: null, motherId: null, achievements: "", notes: "", photo: "", favorite: false, demo: false,
-    archiveSourceId: "", bonitations: []
+    archiveSourceId: "", sourcePedigree: null, sourceEvents: null, sourceChildren: null, bonitations: [],
+    country: "", originalName: "", className: "", exterior: "", titles: "",
+    vpkosDate: "", docsDate: "", originDate: "", acceptedDate: "", recordDate: "", updated: "", deathDate: ""
   };
   const samples = [
     { id: "demo-buran", name: "Буран", breed: "Лайка западносибирская", birth: "2022-04-17", region: "Вологодская область", color: "Серо-палевый", regNumber: "ДЕМО-001", motherId: "demo-yugra", achievements: "Диплом II степени · испытания по белке" },
@@ -649,6 +691,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   const pageSize = 50;
   let filterTimer;
   let editedId = "";
+  const copiedPedigrees = new Map();
 
   function notice(message) {
     byId("notice").textContent = message;
@@ -658,7 +701,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   function readBackup(text) {
     const data = JSON.parse(text);
     if (data?.format !== "sled-registry" || data.version !== 1 || !Array.isArray(data.dogs)) {
-      throw new Error("Выберите резервную копию СкороСлед в формате JSON.");
+      throw new Error("Выберите резервную копию приложения «Аккерман» в формате JSON.");
     }
     const ids = new Set();
     return data.dogs.map((dog) => {
@@ -673,6 +716,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       for (const field of Object.keys(blankDog)) {
         if (field === "fatherId" || field === "motherId") {
           record[field] = typeof dog[field] === "string" && dog[field] ? dog[field] : null;
+        } else if (field === "sourcePedigree") {
+          record[field] = Pedigree.readSnapshot(dog[field]);
+        } else if (field === "sourceEvents") {
+          record[field] = ProfileData.cleanEvents(dog[field]);
+        } else if (field === "sourceChildren") {
+          record[field] = ProfileData.cleanChildren(dog[field]);
         } else if (field === "bonitations") {
           record[field] = readBonitations(dog[field]);
         } else if (typeof dog[field] === typeof blankDog[field]) {
@@ -739,6 +788,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
   function dogLink(dog) {
     const link = node("a", dog.name);
+    link.title = dog.name;
     link.href = (dog.live ? "#rors-live=" : dog.rors ? "#rors=" : "#dog=") + encodeURIComponent(dog.id);
     return link;
   }
@@ -856,6 +906,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       breed: sourceLabel(dog.breed), sex: Object.hasOwn(labels, sex) ? sex : "",
       birth: sourceDate(dog.birthday_date || dog.birth),
       region: sourceLabel(dog.region), color: sourceLabel(dog.color),
+      country: sourceLabel(dog.country), originalName: sourceLabel(dog.foreign_docname, dog.originalName),
+      className: sourceLabel(dog.class_best, dog.className), exterior: sourceLabel(dog.exterior_best, dog.exterior),
+      titles: sourceLabel(dog.distinct_titles_string, dog.titles),
+      vpkosDate: sourceDate(dog.vpkos_date || dog.vpkosDate), docsDate: sourceDate(dog.docs_date || dog.docsDate),
+      originDate: sourceDate(dog.spravka_date || dog.originDate), acceptedDate: sourceDate(dog.accepted_date || dog.acceptedDate),
+      recordDate: sourceDate(dog.created || dog.recordDate), updated: sourceDate(dog.updated), deathDate: sourceDate(dog.death_date || dog.deathDate),
       owner: sourceLabel(dog.owner, dog.ownerInitials),
       regNumber: sourceLabel(dog.vpkos_num, dog.regNumber),
       pedigreeNumber: sourceLabel(dog.fci_num, dog.pedigreeNumber),
@@ -879,7 +935,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       if (byId.size % 5000 === 0) onProgress(byId.size);
     });
     if (!byId.size) throw new Error("В выгрузке нет записей о собаках.");
-    return { byId, dogs: [...byId.values()], file, order: new Map() };
+    const children = new Map();
+    for (const dog of byId.values()) for (const parentId of new Set([dog.fatherId, dog.motherId].filter(Boolean))) {
+      if (!children.has(parentId)) children.set(parentId, []);
+      children.get(parentId).push(dog);
+    }
+    profileSourceCache.clear(); profileChildrenCache.clear();
+    return { byId, dogs: [...byId.values()], children, file, order: new Map() };
   }
 
   async function readArchiveRecord(file, dog) {
@@ -1044,48 +1106,100 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     } finally {
       archiveLoading = false;
       updateArchiveButtons();
-      if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=")) render();
+      if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=") || currentDog()?.archiveSourceId) render();
     }
   }
 
-  function renderArchiveDetails(dog) {
-    const details = byId("archive-details");
-    const full = byId("archive-full");
-    byId("archive-events").replaceChildren();
-    full.textContent = "Загрузка…";
-    details.hidden = false;
-    const currentArchive = archive;
-    readArchiveRecord(archive.file, dog).then((row) => {
-      if (archive !== currentArchive || currentDog()?.id !== dog.id || !currentDog()?.rors) return;
-      full.textContent = JSON.stringify(row, null, 2);
-      byId("archive-events").replaceChildren(...rorsEventPanels(row));
-    }).catch(() => {
-      if (currentDog()?.id === dog.id && currentDog()?.rors) full.textContent = "Не удалось прочитать данные карточки.";
-    });
+  function sourcePedigreeTree(dog) {
+    const sourceId = dog.rors ? dog.id : dog.archiveSourceId;
+    if (!sourceId) return null;
+    const online = liveDetail?.dog?.id === sourceId ? liveDetail : null;
+    if (online?.pedigree?.dog.id === sourceId) return online.pedigree;
+    const recovered = copiedPedigrees.get(sourceId)?.tree;
+    if (recovered) return recovered;
+    const original = archive?.byId.get(sourceId);
+    if (original) return Pedigree.fromGraph(original, (id) => archive.byId.get(String(id)));
+    const saved = Pedigree.fromSnapshot(dog.sourcePedigree);
+    if (saved) return saved;
+    if (online) {
+      const parents = new Map(Object.values(online.parents || {})
+        .filter((parent) => parent?.id != null).map((parent) => [String(parent.id), rorsDog(parent)]));
+      return Pedigree.fromGraph(online.dog, (id) => parents.get(String(id)));
+    }
+    return null;
   }
 
-  function rorsEventPanels(row) {
-    const panels = [];
-    for (const [title, entries, format] of [
-      ["Выставки и выводки", row.exhibition_evals, (item) => [
-        sourceLabel(item.common_exhibition_name, item.exhibition, item.name),
-        formatDate(sourceDate(item.common_exhibition_start_date || item.exhibition_start_date)),
-        sourceLabel(item.exterior_type, item.complex_eval)
-      ]],
-      ["Испытания и состязания", row.competition_evals, (item) => [
-        sourceLabel(item.competition, item.name), formatDate(sourceDate(item.start_date)),
-        sourceLabel(item.diploma, item.rating_total)
-      ]]
-    ]) {
-      if (!Array.isArray(entries) || !entries.length) continue;
-      const group = node("section", undefined, "archive-event-group");
-      const list = node("ul");
-      list.append(...entries.filter((item) => item && typeof item === "object")
-        .map((item) => node("li", format(item).filter(Boolean).join(" · ") || "Запись мероприятия")));
-      group.append(node("h2", title), list);
-      panels.push(group);
+  function sourcePedigreeComplete(dog) {
+    const id = dog.rors ? dog.id : dog.archiveSourceId;
+    return Boolean((liveDetail?.dog?.id === id && liveDetail.pedigree)
+      || copiedPedigrees.get(id)?.tree || archive?.byId.has(id) || dog.sourcePedigree?.complete);
+  }
+
+  function pedigreeForDog(dog) {
+    if (dog.rors) return sourcePedigreeTree(dog);
+    const lookup = new Map(records.map((entry) => [entry.id, entry]));
+    const tree = Pedigree.fromGraph(dog, (id) => lookup.get(id));
+    function fill(branch, depth = 0) {
+      if (!branch || branch.dog.rors || depth >= 12) return;
+      const source = sourcePedigreeTree(branch.dog);
+      branch.father ||= source?.father || null;
+      branch.mother ||= source?.mother || null;
+      fill(branch.father, depth + 1);
+      fill(branch.mother, depth + 1);
     }
-    return panels;
+    fill(tree);
+    return tree;
+  }
+
+  function pedigreeLink(dog) {
+    return dogLink(dog.rors && archive?.byId.has(dog.id) ? archive.byId.get(dog.id) : dog);
+  }
+
+  function pedigreePanel(dog) {
+    return Pedigree.render(pedigreeForDog(dog), pedigreeLink);
+  }
+
+  function personalParent(dog, side) {
+    const local = records.find((entry) => entry.id === dog[side + "Id"]);
+    if (local) return dogLink(local);
+    const parent = sourcePedigreeTree(dog)?.[side]?.dog;
+    return parent ? pedigreeLink(parent) : "—";
+  }
+
+  function showCopiedPedigreeStatus(dog) {
+    const state = copiedPedigrees.get(dog.archiveSourceId);
+    byId("live-profile-status").textContent = state?.loading ? "Восстанавливаем родословную из РОРС…" : state?.error || "";
+    byId("live-profile-retry").hidden = !state?.error;
+  }
+
+  async function recoverCopiedPedigree(dog, retry = false) {
+    if (dog.rors || !/^\d+$/.test(dog.archiveSourceId || "") || dog.sourcePedigree?.complete) return;
+    const id = dog.archiveSourceId;
+    const previous = copiedPedigrees.get(id);
+    if (previous?.loading || (previous && !retry)) return;
+    const state = { loading: true, error: "", tree: null };
+    copiedPedigrees.set(id, state);
+    try {
+      // Finish the current profile render before a cached pedigree can save and render again.
+      await Promise.resolve();
+      let tree = sourcePedigreeTree(dog);
+      if (!tree || !sourcePedigreeComplete(dog)) {
+        const data = await rorsGet("/api/dog_ancestors/" + id);
+        tree = Pedigree.fromApi(data.ancestors, rorsDog);
+      }
+      if (!tree || tree.dog.id !== id) throw new Error("Нет данных родословной.");
+      state.tree = tree;
+      state.loading = false;
+      const snapshot = Pedigree.snapshot(tree);
+      if (!snapshot) throw new Error("Не удалось подготовить родословную.");
+      if (records.some((entry) => entry.id === dog.id)) {
+        saveRecords(records.map((entry) => entry.id === dog.id ? { ...entry, sourcePedigree: snapshot } : entry));
+      }
+    } catch (error) {
+      state.loading = false;
+      state.error = state.tree ? error.message : "Не удалось восстановить родословную из РОРС. Можно повторить загрузку.";
+    }
+    if (currentDog()?.id === dog.id && !currentDog()?.rors) showCopiedPedigreeStatus(dog);
   }
 
   const rorsApi = "https://api.rorsdb.ru";
@@ -1214,19 +1328,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     return dogLink({ id, name: name || "Карточка РОРС", live: true, rors: true });
   }
 
-  function catalogRelated(root) {
-    const found = new Map();
-    function visit(branch) {
-      if (!branch?.known || !branch.entity || !/^\d+$/.test(branch.entity.id)) return;
-      const dog = rorsDog(branch.entity);
-      if (!found.has(dog.id)) found.set(dog.id, dog);
-      visit(branch.father);
-      visit(branch.mother);
-    }
-    visit(root);
-    return found;
-  }
-
   async function rorsEvaluations(path, key, id, signal) {
     const items = [];
     const limit = 100;
@@ -1243,16 +1344,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
   function renderLiveSupplement(dog) {
     if (liveDetail?.dog !== dog) return;
-    const panel = byId("archive-events");
-    const sections = rorsEventPanels(liveDetail.events || {});
-    if (liveDetail.related?.size > 1) {
-      const group = node("section", undefined, "archive-event-group");
-      const links = node("div", undefined, "relation-list");
-      for (const ancestor of liveDetail.related.values()) if (ancestor.id !== dog.id) links.append(dogLink(ancestor));
-      group.append(node("h2", "Предки"), links);
-      sections.unshift(group);
-    }
-    panel.replaceChildren(...sections);
     byId("live-profile-status").textContent = liveDetail.loading ? "Загружаем родословную и результаты…"
       : liveDetail.partial ? "Часть сведений РОРС сейчас недоступна." : "";
     byId("live-profile-retry").hidden = !liveDetail.partial;
@@ -1268,11 +1359,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("details").replaceChildren();
     byId("archive-events").replaceChildren();
     byId("bon-panel").hidden = true;
-    byId("archive-details").hidden = true;
     byId("profile-actions").hidden = true;
     byId("profile-example").hidden = true;
-    byId("source-reference").hidden = false;
-    byId("source-link").href = "https://rorsdb.ru/display/dog/" + id;
     byId("live-profile-status").textContent = "Загружаем карточку…";
     byId("live-profile-retry").hidden = true;
     try {
@@ -1292,7 +1380,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       ]);
       if (!active()) return;
       const [ancestors, children, exhibitions, competitions] = results.map((result) => result.value);
-      detail.related = catalogRelated(ancestors?.ancestors);
+      detail.pedigree = Pedigree.fromApi(ancestors?.ancestors, rorsDog);
+      detail.related = Pedigree.toMap(detail.pedigree);
       detail.children = Array.isArray(children?.children) ? children.children
         .map((item) => item?.entity ?? item?.dog ?? item)
         .filter((item) => item && /^\d+$/.test(item.id)).map(rorsDog) : [];
@@ -1317,7 +1406,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   function archiveDogCopy(dog) {
-    const copy = { ...blankDog, id: newRecordId(), createdAt: Date.now(), archiveSourceId: dog.id };
+    const copy = { ...blankDog, id: newRecordId(), createdAt: Date.now(), archiveSourceId: dog.id,
+      sourcePedigree: Pedigree.snapshot(sourcePedigreeTree(dog), sourcePedigreeComplete(dog)),
+      sourceEvents: dog.live && liveDetail?.loading ? null : ProfileData.cleanEvents(profileEvents(dog)),
+      sourceChildren: dog.live && liveDetail?.loading ? null : ProfileData.cleanChildren(profileChildren(dog)) };
     for (const field of Object.keys(blankDog)) {
       if (typeof blankDog[field] === "string" && typeof dog[field] === "string") copy[field] = dog[field];
     }
@@ -1597,47 +1689,28 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
   function renderProfile(dog) {
     byId("profile-title").textContent = dog.name;
+    byId("profile-title").title = dog.name;
     byId("profile-example").hidden = !dog.demo;
-    const puppies = dog.live ? liveDetail.children || [] : (dog.rors ? archive.dogs : records)
-      .filter((record) => record.fatherId === dog.id || record.motherId === dog.id);
-    const children = node("div", undefined, "relation-list");
-    children.append(...puppies.map(dogLink));
-    const rows = [
-      detailRow("Порода", dog.breed), detailRow("Пол", labels[dog.sex]), detailRow("Дата рождения", formatDate(dog.birth)),
-      detailRow("Окрас", dog.color), detailRow("Регион", dog.region), detailRow("Владелец", dog.owner),
-      detailRow("Номер ВПКОС", dog.regNumber), detailRow("№ родословной FCI/РКФ", dog.pedigreeNumber),
-      detailRow("№ справки о происхождении", dog.originNumber), detailRow("№ свидетельства", dog.certificateNumber),
-      detailRow("№ клейма", dog.tattooNumber),
-      detailRow("Отец", dog.live ? liveRelation(dog.fatherId, liveDetail.parents.father?.name) : relation(dog.fatherId, dog.rors)),
-      detailRow("Мать", dog.live ? liveRelation(dog.motherId, liveDetail.parents.mother?.name) : relation(dog.motherId, dog.rors)),
-      detailRow("Потомки", puppies.length ? children : "—")
-    ];
-    if (dog.live) {
-      for (const [label, field] of [["Кличка в оригинале", "originalName"], ["Страна", "country"], ["Класс", "className"],
-        ["Экстерьер", "exterior"], ["Титулы", "titles"], ["Дата записи в ВПКОС", "vpkosDate"], ["Дата свидетельства", "docsDate"],
-        ["Дата справки", "originDate"], ["Обновлено в РОРС", "updated"]]) {
-        if (dog[field]) rows.push(detailRow(label, field.endsWith("Date") || field === "updated" ? formatDate(dog[field]) : dog[field]));
-      }
-    }
-    if (dog.achievements) rows.push(detailRow("Достижения", node("p", dog.achievements)));
-    if (dog.notes) rows.push(detailRow("Заметки", node("p", dog.notes)));
-    byId("details").replaceChildren(...rows);
     const localDog = registryDog(dog);
-    byId("favorite").textContent = localDog?.favorite ? "Убрать из избранного" : "В избранное";
+    const favoriteButton = byId("favorite");
+    const isFavorite = Boolean(localDog?.favorite);
+    favoriteButton.textContent = isFavorite ? "★" : "☆";
+    favoriteButton.title = isFavorite ? "Убрать из избранного" : "В избранное";
+    favoriteButton.setAttribute("aria-label", favoriteButton.title + ": " + dog.name);
+    favoriteButton.setAttribute("aria-pressed", String(isFavorite));
     byId("profile-actions").hidden = false;
     byId("edit").hidden = byId("remove").hidden = Boolean(dog.rors);
     byId("favorite").hidden = !localDog && !canCopyArchiveDog(dog);
-    byId("archive-details").hidden = true;
     byId("archive-events").replaceChildren();
     byId("live-profile-status").textContent = "";
     byId("live-profile-retry").hidden = true;
-    byId("source-reference").hidden = !dog.rors || !/^\d+$/.test(dog.id);
-    if (dog.rors) {
-      byId("source-link").href = "https://rorsdb.ru/display/dog/" + encodeURIComponent(dog.id);
-      if (dog.live) renderLiveSupplement(dog);
-      else renderArchiveDetails(dog);
-    }
+    if (dog.rors && dog.live) renderLiveSupplement(dog);
     renderBonitationPanel(dog);
+    renderProfileBlocks(dog);
+    if (!dog.rors && dog.archiveSourceId) {
+      void recoverCopiedPedigree(dog);
+      showCopiedPedigreeStatus(dog);
+    }
   }
 
   function render() {
@@ -1695,8 +1768,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const relatives = records.filter((item) => item.id !== editedId).sort((a, b) => alphabetic(a.name, b.name));
     const options = (sex) => relatives.filter((item) => item.sex === sex)
       .map((item) => [[item.name, item.regNumber].filter(Boolean).join(" · "), item.id]);
-    replaceOptions(form.elements.fatherId, "Не указан", options("male"));
-    replaceOptions(form.elements.motherId, "Не указана", options("female"));
+    const source = dog && sourcePedigreeTree(dog);
+    replaceOptions(form.elements.fatherId, source?.father ? source.father.dog.name + " · РОРС" : "Не указан", options("male"));
+    replaceOptions(form.elements.motherId, source?.mother ? source.mother.dog.name + " · РОРС" : "Не указана", options("female"));
     byId("breeds-list").replaceChildren(...listValues("breed").map((name) => new Option(name)));
     for (const [name, value] of Object.entries(dog || blankDog)) {
       const field = form.elements.namedItem(name);
@@ -1824,7 +1898,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   byId("live-source").onclick = () => chooseRorsSource("live");
   byId("file-source").onclick = () => chooseRorsSource("file");
   byId("live-retry").onclick = () => { void loadLiveTaxonomies(); renderCatalog(); };
-  byId("live-profile-retry").onclick = () => { if (liveRoute()) void loadLiveProfile(liveRoute()); };
+  byId("live-profile-retry").onclick = () => {
+    const dog = currentDog();
+    if (dog && !dog.rors && dog.archiveSourceId) {
+      void recoverCopiedPedigree(dog, true);
+      showCopiedPedigreeStatus(dog);
+    } else if (liveRoute()) void loadLiveProfile(liveRoute());
+  };
   byId("archive-retry").onclick = () => { void attachArchive(); };
   byId("archive-import").onclick = () => byId("archive-file").click();
   byId("archive-file").onchange = (event) => {
@@ -1856,7 +1936,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const url = URL.createObjectURL(new Blob([backup], { type: "application/json" }));
     const link = node("a");
     link.href = url;
-    link.download = "skorosled-backup.json";
+    link.download = "akkerman-backup.json";
     document.body.append(link);
     link.click();
     link.remove();

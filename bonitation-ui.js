@@ -121,12 +121,8 @@ function renderBonitationPanel(dog) {
   byId("bon-panel").hidden = false;
   const local = registryDog(dog);
   const make = byId("bon-new");
-  make.textContent = !local ? "В мой реестр" : dog.rors ? "Открыть мою карточку" : "Новый расчёт";
-  make.onclick = () => {
-    if (!dog.rors) return openBonitation(dog);
-    if (local) { openPersonalDog(local); return; }
-    copyForBonitation(dog);
-  };
+  make.textContent = "Новый расчёт";
+  make.onclick = () => openProfileBonitation(dog, true);
   const history = byId("bon-history");
   if (!local) {
     history.replaceChildren(node("p", "Добавьте собаку из базы РОРС в свой реестр, чтобы сохранять расчёты.", "bon-muted"));
@@ -175,8 +171,9 @@ function copyForBonitation(dog) {
 function bonRelatives(dog) {
   const online = dog.archiveSourceId && liveDetail?.dog?.id === dog.archiveSourceId ? liveDetail : null;
   const archiveDog = dog.archiveSourceId && archive?.byId.get(dog.archiveSourceId);
-  const source = online?.dog || archiveDog || dog;
-  const lookup = online ? new Map(online.related) : archiveDog ? archive.byId : new Map(records.map((record) => [record.id, record]));
+  const saved = Pedigree.toMap(pedigreeForDog(dog));
+  const source = online?.dog || archiveDog || saved.get(dog.id) || dog;
+  const lookup = online ? new Map(online.related) : archiveDog ? archive.byId : saved;
   if (online) {
     lookup.set(source.id, source);
     for (const child of online.children || []) lookup.set(child.id, child);
@@ -229,7 +226,7 @@ function addBonEntry(child, data = {}) {
       bonOptionField("Оценка экстерьера", "offspringGrade", options(Bonitation.grades), data.grade, "Не указана"));
   }
   fields.append(bonOptionField("Вид испытаний", "type", bonTrialOptions(key, child, data.type), data.type, "Выберите вид"),
-    bonOptionField("Степень", "degree", Bonitation.degrees.slice(1).map((label, index) => [label, String(index + 1)]), data.degree, "Нет"));
+    bonOptionField("Степень диплома", "degree", Bonitation.degrees.slice(1).map((label, index) => [label, String(index + 1)]), data.degree, "Нет"));
   fields.append(bonOptionField("Формат работы", "work", options(Bonitation.formats), data.work, "Не указан"));
   if (!child) fields.append(bonTextField("Дата диплома", "diplomaDate", "date", data.date),
     bonTextField("Мероприятие или номер", "reference", "text", data.reference));
@@ -261,10 +258,10 @@ function draftBonitation(dog) {
   });
 }
 
-function openBonitation(dog, saved) {
+function openBonitation(dog, saved, initial) {
   const dialog = byId("bon-editor");
   const form = byId("bon-form");
-  const data = saved || draftBonitation(dog);
+  const data = saved || initial || draftBonitation(dog);
   bonSession = { dog, original: saved, snapshot: bonInput({ dog }).dog };
 
   form.reset();
@@ -281,6 +278,7 @@ function openBonitation(dog, saved) {
   data.diplomas.forEach((item) => addBonEntry(false, item));
   data.offspring.forEach((item) => addBonEntry(true, item));
   byId("bon-error").hidden = true;
+  byId("bon-recalculated").textContent = "";
   byId("bon-delete").hidden = !saved;
   previewBonitation();
   dialog.showModal();
@@ -434,6 +432,12 @@ function mountBonitation() {
       previewBonitation();
     };
   }
+  byId("bon-recalculate").onclick = () => {
+    previewBonitation();
+    byId("bon-recalculated").textContent = "Бонитировка пересчитана. Сохраните результат.";
+    byId("bon-result").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
+  form.addEventListener("input", () => { byId("bon-recalculated").textContent = ""; });
   byId("bon-close").onclick = byId("bon-cancel").onclick = () => dialog.close();
   byId("bon-delete").onclick = () => {
     const { original } = bonSession;
