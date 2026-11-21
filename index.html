@@ -387,12 +387,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <p class="notice" id="notice" role="status" hidden></p>
   <section id="catalog">
     <div class="heading">
-      <div><h1 id="catalog-title">Каталог собак</h1><p class="count" id="count" aria-live="polite"></p></div>
+      <div><h1 id="catalog-title">База РОРС</h1><p class="count" id="count" aria-live="polite"></p></div>
       <div class="tabs" aria-label="Записи" role="group">
-        <button type="button" id="all" aria-pressed="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-list"/></svg>Все собаки</button>
-        <button type="button" id="favorites" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-bookmark"/></svg>Избранное</button>
-        <button type="button" id="archive-tab" aria-pressed="false">База РОРС</button>
+        <button type="button" id="archive-tab" aria-pressed="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-list"/></svg>База РОРС</button>
+        <button type="button" id="favorites" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-bookmark"/></svg>Избранные собаки</button>
       </div>
+    </div>
+    <div class="archive-tools" id="personal-tools" hidden>
+      <button type="button" class="button" id="personal-filter">Показать все мои карточки</button>
     </div>
     <div class="archive-tools" id="archive-tools" hidden>
       <div class="archive-source" role="group" aria-label="Источник данных РОРС">
@@ -632,8 +634,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   let records = samples;
   let storage = null;
   let readFailed = false;
-  let favoritesOnly = false;
-  let archiveView = false;
+  let favoritesOnly = true;
+  let archiveView = true;
   const hostedArchivePath = "data/rors-public-2026-11-20.ndjson.gz";
   const hostedArchiveName = "Архив РОРС от 20.11.2026";
   const canLoadHostedArchive = ["http:", "https:"].includes(location.protocol);
@@ -1306,12 +1308,29 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     }
   }
 
+  function registryDog(dog) {
+    return dog.rors ? records.find((entry) => entry.archiveSourceId === dog.id) : dog;
+  }
+
+  function canCopyArchiveDog(dog) {
+    return Boolean(dog.breed && Object.hasOwn(labels, dog.sex));
+  }
+
+  function archiveDogCopy(dog) {
+    const copy = { ...blankDog, id: newRecordId(), createdAt: Date.now(), archiveSourceId: dog.id };
+    for (const field of Object.keys(blankDog)) {
+      if (typeof blankDog[field] === "string" && typeof dog[field] === "string") copy[field] = dog[field];
+    }
+    return copy;
+  }
+
   function star(dog) {
-    const button = node("button", dog.favorite ? "★" : "☆", "star");
+    const favorite = Boolean(registryDog(dog)?.favorite);
+    const button = node("button", favorite ? "★" : "☆", "star");
     button.type = "button";
-    button.setAttribute("aria-label", (dog.favorite ? "Убрать из избранного: " : "В избранное: ") + dog.name);
-    button.setAttribute("aria-pressed", String(dog.favorite));
-    button.addEventListener("click", () => toggleFavorite(dog.id));
+    button.setAttribute("aria-label", (favorite ? "Убрать из избранного: " : "В избранное: ") + dog.name);
+    button.setAttribute("aria-pressed", String(favorite));
+    button.addEventListener("click", () => toggleFavorite(dog));
     return button;
   }
 
@@ -1336,7 +1355,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     if (dog.demo) name.append(node("span", "Пример", "demo"));
     const last = node("td", undefined, "star-cell");
     last.setAttribute("role", "cell");
-    if (!dog.rors) last.append(star(dog));
+    if (registryDog(dog) || canCopyArchiveDog(dog)) last.append(star(dog));
     row.append(name, cell("Порода", dog.breed, "breed-cell"),
       cell("Пол", dog.sex ? node("span", labels[dog.sex], "sex " + dog.sex) : "—"),
       cell("Дата рождения", formatDate(dog.birth)), cell("№ ВПКОС", dog.regNumber), cell("Регион", dog.region), last);
@@ -1513,10 +1532,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const online = liveMode();
     byId("date-error").hidden = !invalidRange;
     showActiveFilters(values);
-    byId("catalog-title").textContent = archiveView ? "База РОРС" : favoritesOnly ? "Избранное" : "Каталог собак";
-    byId("all").setAttribute("aria-pressed", String(!archiveView && !favoritesOnly));
-    byId("favorites").setAttribute("aria-pressed", String(favoritesOnly && !archiveView));
+    byId("catalog-title").textContent = archiveView ? "База РОРС" : favoritesOnly ? "Избранные собаки" : "Мои карточки";
+    byId("favorites").setAttribute("aria-pressed", String(!archiveView));
     byId("archive-tab").setAttribute("aria-pressed", String(archiveView));
+    byId("personal-tools").hidden = archiveView;
+    byId("personal-filter").textContent = favoritesOnly ? "Показать все мои карточки" : "Показать только избранные";
     byId("archive-tools").hidden = !archiveView;
     byId("live-source").setAttribute("aria-pressed", String(online));
     byId("file-source").setAttribute("aria-pressed", String(!online));
@@ -1602,8 +1622,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     if (dog.achievements) rows.push(detailRow("Достижения", node("p", dog.achievements)));
     if (dog.notes) rows.push(detailRow("Заметки", node("p", dog.notes)));
     byId("details").replaceChildren(...rows);
-    byId("favorite").textContent = dog.favorite ? "Убрать из избранного" : "В избранное";
-    byId("profile-actions").hidden = Boolean(dog.rors);
+    const localDog = registryDog(dog);
+    byId("favorite").textContent = localDog?.favorite ? "Убрать из избранного" : "В избранное";
+    byId("profile-actions").hidden = false;
+    byId("edit").hidden = byId("remove").hidden = Boolean(dog.rors);
+    byId("favorite").hidden = !localDog && !canCopyArchiveDog(dog);
     byId("archive-details").hidden = true;
     byId("archive-events").replaceChildren();
     byId("live-profile-status").textContent = "";
@@ -1622,7 +1645,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     if (onlineId) {
       archiveView = true;
       rorsSource = "live";
-      favoritesOnly = false;
       liveCatalogRequest?.abort();
       byId("catalog").hidden = true;
       byId("profile").hidden = false;
@@ -1636,7 +1658,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     if (location.hash.startsWith("#rors=")) {
       archiveView = true;
       rorsSource = "file";
-      favoritesOnly = false;
+    } else if (dog) {
+      archiveView = false;
     }
     byId("catalog").hidden = Boolean(dog);
     byId("profile").hidden = !dog;
@@ -1651,10 +1674,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("clear-demo").hidden = archiveView || !records.some((item) => item.demo);
   }
 
-  function toggleFavorite(id) {
+  function toggleFavorite(dog) {
+    const localDog = registryDog(dog);
+    if (!localDog && !canCopyArchiveDog(dog)) return;
+    const favorite = !localDog?.favorite;
     try {
-      saveRecords(records.map((dog) => dog.id === id ? { ...dog, favorite: !dog.favorite } : dog));
-      byId("status").textContent = records.find((dog) => dog.id === id).favorite ? "Собака добавлена в избранное." : "Собака убрана из избранного.";
+      const next = localDog
+        ? records.map((entry) => entry.id === localDog.id ? { ...entry, favorite } : entry)
+        : [{ ...archiveDogCopy(dog), favorite }, ...records];
+      saveRecords(next);
+      byId("status").textContent = favorite ? "Собака добавлена в избранное." : "Собака убрана из избранного.";
     } catch (error) {
       notice(error.message);
     }
@@ -1723,8 +1752,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       checkFamily(dog, records);
       saveRecords(previous ? records.map((item) => item.id === dog.id ? dog : item) : [dog, ...records]);
       editor.close();
-      archiveView = false;
-      location.hash = "dog=" + encodeURIComponent(dog.id);
+      openPersonalDog(dog);
       byId("status").textContent = "Карточка сохранена.";
     } catch (error) {
       byId("form-error").textContent = error.message;
@@ -1735,7 +1763,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   byId("add").onclick = () => openEditor();
   byId("edit").onclick = () => { const dog = currentDog(); if (dog) openEditor(dog); };
   byId("close").onclick = byId("cancel").onclick = () => editor.close();
-  byId("favorite").onclick = () => { const dog = currentDog(); if (dog) toggleFavorite(dog.id); };
+  byId("favorite").onclick = () => { const dog = currentDog(); if (dog) toggleFavorite(dog); };
   byId("remove").onclick = () => {
     const dog = currentDog();
     if (!dog || !confirm("Удалить карточку «" + dog.name + "»?")) return;
@@ -1752,23 +1780,39 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       byId("status").textContent = "Демонстрационные записи удалены.";
     } catch (error) { notice(error.message); }
   };
-  function chooseCatalog(type) {
-    const nextArchive = type === "archive";
+  function selectCatalog(nextArchive) {
     if (archiveView !== nextArchive) {
       for (const field of Object.keys(filterLabels)) setFilterValue(field, "");
     }
     archiveView = nextArchive;
-    favoritesOnly = type === "favorites";
     catalogPage = 0;
-    render();
   }
 
-  byId("all").onclick = () => chooseCatalog("all");
-  byId("favorites").onclick = () => chooseCatalog("favorites");
-  byId("archive-tab").onclick = () => chooseCatalog("archive");
-  byId("home").addEventListener("click", () => {
-    if (!location.hash) chooseCatalog("all");
-    else { archiveView = false; favoritesOnly = false; }
+  function chooseCatalog(nextArchive) {
+    selectCatalog(nextArchive);
+    if (location.hash) location.hash = "";
+    else render();
+  }
+
+  function openPersonalDog(dog) {
+    selectCatalog(false);
+    if (!dog.favorite) favoritesOnly = false;
+    location.hash = "dog=" + encodeURIComponent(dog.id);
+  }
+
+  byId("favorites").onclick = () => {
+    favoritesOnly = true;
+    chooseCatalog(false);
+  };
+  byId("personal-filter").onclick = () => {
+    favoritesOnly = !favoritesOnly;
+    catalogPage = 0;
+    renderCatalog();
+  };
+  byId("archive-tab").onclick = () => chooseCatalog(true);
+  byId("home").addEventListener("click", (event) => {
+    event.preventDefault();
+    chooseCatalog(true);
   });
   function chooseRorsSource(source) {
     if (rorsSource === source) return;

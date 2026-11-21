@@ -119,12 +119,12 @@ function bonStanding(dog, data, result) {
 
 function renderBonitationPanel(dog) {
   byId("bon-panel").hidden = false;
-  const local = dog.rors ? records.find((record) => record.archiveSourceId === dog.id) : dog;
+  const local = registryDog(dog);
   const make = byId("bon-new");
   make.textContent = !local ? "В мой реестр" : dog.rors ? "Открыть мою карточку" : "Новый расчёт";
   make.onclick = () => {
     if (!dog.rors) return openBonitation(dog);
-    if (local) { location.hash = "dog=" + encodeURIComponent(local.id); return; }
+    if (local) { openPersonalDog(local); return; }
     copyForBonitation(dog);
   };
   const history = byId("bon-history");
@@ -160,21 +160,14 @@ function renderBonitationPanel(dog) {
 }
 
 function copyForBonitation(dog) {
-  if (!dog.breed || !dog.sex) {
+  if (!canCopyArchiveDog(dog)) {
     notice("В выгрузке не указаны порода или пол. Создайте карточку и заполните эти сведения.");
     return;
   }
   try {
-    const copy = { ...blankDog };
-    for (const field of Object.keys(blankDog)) {
-      if (typeof blankDog[field] === "string" && typeof dog[field] === "string") copy[field] = dog[field];
-    }
-    copy.id = newRecordId();
-    copy.createdAt = Date.now();
-    copy.archiveSourceId = dog.id;
+    const copy = archiveDogCopy(dog);
     saveRecords([copy, ...records]);
-    archiveView = false;
-    location.hash = "dog=" + encodeURIComponent(copy.id);
+    openPersonalDog(copy);
     byId("status").textContent = "Карточка добавлена в ваш реестр.";
   } catch (error) { notice(error.message); }
 }
