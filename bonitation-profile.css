@@ -3,8 +3,8 @@
 .bon-profile-summary .bon-auto-total { margin: 0; }
 .bon-profile-class { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .bon-profile-class .bon-muted { font-size: .875rem; }
-.bon-profile-open { margin-top: 20px; }
-#bon-editor > .bon-history-details { margin: 20px 0 0; }
+.bon-profile-open { margin-top: 20px; text-decoration: none; }
+#bon-editor > .bon-history-details { margin: 20px 0 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
 @media (max-width: 420px) {
   .bon-profile-class { align-items: flex-start; }
   .bon-profile-open { width: 100%; }

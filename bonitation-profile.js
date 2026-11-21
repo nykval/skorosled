@@ -24,12 +24,12 @@ function renderProfileBonitation(dog, relatives = [], loading = false) {
     result?.qualified && result.age && result.age !== "outside"
       ? Bonitation.classNames[result.qualified.index] : "Пока не определён", "bon-auto-class"));
   summary.append(classInfo);
-  const open = bonButton("Открыть бонитировку", () => openProfileBonitation(dog), "button bon-profile-open");
-  open.setAttribute("aria-haspopup", "dialog");
+  const open = node("a", "Открыть бонитировку", "button bon-profile-open");
+  open.href = bonitationHash(dogLink(dog).getAttribute("href"));
   byId("bon-auto").replaceChildren(summary, open);
 }
 
-function openProfileBonitation(dog, createNew = false) {
+function openProfileBonitation(dog, createNew = false, { navigate = true, throwErrors = false } = {}) {
   try {
     const state = profileBonitationState?.dogId === dog.id ? profileBonitationState : null;
     if (state?.loading && !latestProfileBonitation(dog)) {
@@ -47,13 +47,18 @@ function openProfileBonitation(dog, createNew = false) {
       local = archiveDogCopy(source);
       saveRecords([local, ...records]);
     }
-    const saved = !createNew && latestProfileBonitation(dog);
-    if (saved) { openBonitation(local, saved); return; }
+    const savedId = bonitationRoute()?.savedId;
+    const saved = !createNew && (savedId ? local.bonitations.find((entry) => entry.id === savedId) : latestProfileBonitation(dog));
+    if (!createNew && savedId && !saved) throw new Error("Сохранённый расчёт не найден. Вернитесь в карточку собаки.");
+    if (saved) { openBonitation(local, saved, undefined, { navigate }); return; }
     const draft = bonInput({
       ...draftBonitation(local), ...automatic.input, dog: profileDog(local),
       show: createNew ? "" : "Текущая бонитировка",
       date: automatic.input?.date || new Date().toLocaleDateString("sv-SE")
     });
-    openBonitation(local, undefined, draft);
-  } catch (error) { notice(error.message); }
+    openBonitation(local, undefined, draft, { createNew, navigate });
+  } catch (error) {
+    if (throwErrors) throw error;
+    notice(error.message);
+  }
 }

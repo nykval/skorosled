@@ -6,8 +6,8 @@
 <title>Аккерман — реестр собак</title>
 <link rel="icon" type="image/png" href="dog-logo.png">
 <link rel="stylesheet" href="pedigree.css?v=profile-catalog-3">
-<link rel="stylesheet" href="profile.css?v=profile-catalog-3">
-<link rel="stylesheet" href="bonitation-profile.css?v=profile-catalog-3">
+<link rel="stylesheet" href="profile.css?v=mobile-scroll-1">
+<link rel="stylesheet" href="bonitation-profile.css?v=bonitation-page-1">
 <link rel="stylesheet" href="profile-design.css?v=profile-catalog-3">
 <style>
   :root {
@@ -22,7 +22,8 @@
     --line: #dce4d9;
     --danger: #962f29;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; scrollbar-width: none; }
+  *::-webkit-scrollbar { display: none; width: 0; height: 0; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 1rem/1.5 var(--font-ui); }
   h1, h2, p { margin: 0; }
@@ -56,23 +57,26 @@
   #add { display: inline-flex; align-items: center; gap: 7px; }
   .mobile-add { display: none; }
 
-  .tabs { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: #e9eee5; }
-  .tabs button { display: inline-flex; align-items: center; gap: 6px; min-height: 39px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); font-size: .91rem; font-weight: 650; }
-  .tabs button[aria-pressed="true"] { color: var(--green); background: var(--paper); border-color: var(--line); }
   label { display: grid; gap: 4px; min-width: 0; font-size: .85rem; font-weight: 650; color: var(--muted); }
   input, select, textarea { min-height: 43px; min-width: 0; width: 100%; padding: 8px 10px; border: 1px solid #cfd9cb; border-radius: 9px; background: var(--paper); font-size: 1rem; font-weight: 450; }
   input::placeholder, textarea::placeholder { color: #61705e; }
   textarea { resize: vertical; }
   .icon { display: block; width: 18px; height: 18px; flex: none; fill: currentColor; }
-  .tabs .icon { width: 15px; height: 15px; }
-  .catalog-controls { display: grid; gap: 12px; margin-bottom: 15px; }
-  .filter-panel { padding: 14px; border: 1px solid var(--line); border-radius: 13px; background: #f9fbf7; }
-  .filter-heading, .filter-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .catalog-controls { display: grid; min-width: 0; gap: 12px; margin-bottom: 15px; }
+  .filter-panel { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 13px; background: #f9fbf7; }
+  .filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .filter-heading { min-height: 36px; margin: -4px 0 8px; }
   .filter-heading h2 { display: flex; align-items: center; gap: 7px; font-size: 1rem; letter-spacing: 0; }
   .filter-heading h2 .icon { width: 16px; height: 16px; color: var(--green); }
   .filter-reset { min-height: 36px; padding: 4px 6px; }
-  .filter-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 9px 11px; }
+  .filter-fields { display: grid; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 9px 11px; }
+  .filter-additional { margin-top: 12px; border-top: 1px solid var(--line); }
+  .filter-additional > summary { display: flex; align-items: center; gap: 8px; min-height: 46px; padding-block: 8px; cursor: pointer; color: var(--green); font-size: .91rem; font-weight: 650; list-style: none; }
+  .filter-additional > summary::-webkit-details-marker { display: none; }
+  .filter-additional > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: -4px 4px 0 auto; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); }
+  .filter-additional[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
+  .filter-additional[open] > summary { margin-bottom: 8px; }
+  .filter-extra-count { padding: 2px 7px; border-radius: 6px; background: var(--green-light); color: var(--green); font-size: .75rem; font-weight: 600; white-space: nowrap; }
   .filter-field { display: grid; gap: 4px; min-width: 0; color: var(--muted); }
   .filter-caption { color: var(--muted); font-size: .85rem; font-weight: 650; overflow-wrap: anywhere; }
   .filter-input, .dropdown-toggle {
@@ -105,8 +109,15 @@
   .dropdown-option[aria-selected="true"] { background: var(--green-light); color: var(--green); font-weight: 650; }
   .dropdown-check { visibility: hidden; flex: none; }
   .dropdown-option[aria-selected="true"] .dropdown-check { visibility: visible; }
-  .sort-box { flex: none; width: min(100%, 190px); margin-left: auto; }
-  .sort-box .dropdown-toggle { min-height: 42px; font-size: .91rem; }
+  .heading > div:first-child { flex: 1; min-width: 0; }
+  .catalog-toolbar { display: flex; flex: none; align-items: center; gap: 8px; margin-left: auto; }
+  .catalog-toolbar .catalog-icon-button { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--green); }
+  .catalog-toolbar .catalog-icon-button .icon { width: 20px; height: 20px; }
+  .catalog-toolbar .catalog-icon-button:hover, .catalog-toolbar .catalog-icon-button[aria-expanded="true"], .catalog-toolbar .catalog-icon-button.is-active { border-color: #a9bea2; background: var(--green-light); }
+  .catalog-toolbar .catalog-icon-button[aria-pressed="true"] { border-color: var(--green); background: var(--green); color: white; }
+  .favorite-filter-icon { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .catalog-icon-button[aria-pressed="true"] .favorite-filter-icon { fill: currentColor; }
+  .catalog-toolbar .dropdown-options { left: auto; right: 0; width: 210px; max-width: calc(100vw - 24px); }
   .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 7px; min-width: 0; }
   .filter-chip {
     display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-height: 38px;
@@ -118,6 +129,7 @@
   .filter-chip .icon { width: 16px; height: 16px; }
   .filter-date-error { margin-top: 8px; color: var(--danger); font-size: .88rem; }
   .archive-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 13px; }
+  #personal-tools { margin: 12px 0 0; }
   .archive-tools .status { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
   .catalog-pages { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 12px; }
   .archive-event-group { margin-top: 15px; }
@@ -164,7 +176,15 @@
   .footer { margin-top: 24px; }
   .footer-actions { display: flex; flex-wrap: wrap; gap: 0 16px; }
   .status { display: block; color: var(--muted); font-size: .88rem; margin-top: 4px; }
-  dialog { width: min(650px, calc(100% - 20px)); max-height: calc(100dvh - 28px); padding: 19px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--paper); }
+  body:has(dialog[open]) { overflow: hidden; }
+  dialog { width: min(650px, calc(100% - 20px)); max-width: calc(100vw - 20px); max-height: calc(100dvh - 28px); margin: auto; padding: 19px; border: 1px solid var(--line); border-radius: 14px; color: var(--text); background: var(--paper); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  dialog > *, dialog form { min-width: 0; max-width: 100%; }
+  dialog form { width: 100%; }
+  dialog input, dialog select, dialog textarea { max-width: 100%; }
+  dialog input[type="date"] { appearance: none; }
+  dialog legend, dialog .button { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+  dialog p, dialog li, dialog summary { overflow-wrap: anywhere; }
+  dialog .dialog-head .button { flex: none; }
   dialog::backdrop { background: #18261980; }
   .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
   .dialog-head .button { min-height: 37px; padding: 3px 10px; font-size: 1.2rem; }
@@ -177,7 +197,20 @@
   .bon-saved { padding: 0; margin: 10px 0 0; list-style: none; }
   .bon-saved li { padding: 9px 0; border-top: 1px solid var(--line); }
   .bon-muted { color: var(--muted); font-size: .88rem; }
-  #bon-editor { width: min(780px, calc(100% - 20px)); }
+  #bon-editor { width: 100%; max-width: 900px; min-width: 0; margin-inline: auto; }
+  .bon-page-back { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; color: var(--green); text-decoration: none; }
+  .bon-page-back:hover { background: var(--green-light); }
+  .bon-page-back svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .bon-page-heading { margin: 12px 0 24px; min-width: 0; }
+  #bon-edit-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .bon-page-form { min-width: 0; padding: clamp(16px, 3vw, 26px); border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+  .bon-page-form input, .bon-page-form select, .bon-page-form textarea { max-width: 100%; }
+  .bon-page-form input[type="date"] { appearance: none; }
+  .bon-page-form legend, .bon-page-form .button { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+  .bon-page-form p, .bon-page-form li, .bon-page-form summary { overflow-wrap: anywhere; }
+  body:has(#bon-editor:not([hidden])) .topbar,
+  body:has(#bon-editor:not([hidden])) .footer { display: none; }
+  body:has(#bon-editor:not([hidden])) main { padding-top: 12px; }
   .bon-section { border: 0; border-top: 1px solid var(--line); padding: 10px 0 0; margin: 14px 0 0; min-width: 0; }
   .bon-section legend { padding: 0 8px 0 0; color: var(--green); font-weight: 700; }
   .bon-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px; }
@@ -190,12 +223,16 @@
   .bon-result { margin-top: 15px; padding: 12px; background: var(--green-light); border-radius: 10px; }
   .bon-result h3 { margin: 0 0 7px; }
   .bon-result ul { padding-inline-start: 20px; margin: 5px 0; }
+  .bon-result .bon-work-breakdown { padding: 8px 0 10px; margin: 0; list-style: none; font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .bon-work-breakdown > li + li { margin-top: 6px; }
+  .bon-result .bon-versatility-groups { padding-left: 14px; margin-top: 5px; list-style: none; color: var(--muted); }
+  .bon-versatility-groups > li + li { margin-top: 3px; }
   .bon-result details + details { margin-top: 6px; }
   .bon-result summary { cursor: pointer; font-weight: 650; }
   .bon-source { margin-top: 8px; }
   .bon-passed { color: var(--green); }
   .bon-missing { color: #724b26; }
-  .bon-actions { position: sticky; bottom: -19px; padding: 10px 0; background: var(--paper); border-top: 1px solid var(--line); }
+  .bon-actions { position: sticky; z-index: 2; bottom: 0; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid var(--line); }
   .sr-only, .catalog-table thead .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   @media (max-width: 950px) {
@@ -218,7 +255,6 @@
   @media (max-width: 600px) {
     .filter-panel { padding: 10px; }
     .filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .filter-bottom { flex-direction: column; align-items: stretch; }
   }
   @media (max-width: 430px) {
     .topbar-inner, main { width: calc(100% - 24px); }
@@ -226,7 +262,7 @@
     .desktop-add { display: none; }
     .mobile-add { display: inline; }
     .profile-table th, .profile-table td { padding: 9px; }
-    .form-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
 
@@ -390,13 +426,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <section id="catalog">
     <div class="heading">
       <div><h1 id="catalog-title">Все собаки</h1><p class="count" id="count" aria-live="polite"></p></div>
-      <div class="tabs" aria-label="Записи" role="group">
-        <button type="button" id="archive-tab" aria-pressed="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-list"/></svg>Все собаки</button>
-        <button type="button" id="favorites" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-bookmark"/></svg>Избранные собаки</button>
+      <div class="catalog-toolbar" role="group" aria-label="Сортировка и избранное">
+        <div class="dropdown" data-dropdown>
+          <span class="sr-only" id="sort-label">Сортировка</span>
+          <input type="hidden" id="sort" value="newest">
+          <button class="dropdown-toggle catalog-icon-button" id="catalog-sort-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="sort-options" aria-labelledby="sort-label sort-value" title="Сортировка: Сначала новые">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-sort"/></svg><span class="dropdown-value sr-only" id="sort-value">Сначала новые</span>
+          </button>
+          <div class="dropdown-options" id="sort-options" role="listbox" aria-labelledby="sort-label" hidden></div>
+        </div>
+        <button type="button" class="catalog-icon-button" id="favorites" aria-pressed="false" aria-label="Только избранные собаки" title="Показать избранных собак"><svg class="icon favorite-filter-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg></button>
       </div>
-    </div>
-    <div class="archive-tools" id="personal-tools" hidden>
-      <button type="button" class="button" id="personal-filter">Показать все мои карточки</button>
     </div>
     <div class="archive-tools" id="archive-tools" hidden>
       <p class="status" id="archive-status" role="alert"></p>
@@ -408,8 +448,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h2 id="filter-heading"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-filters"/></svg>Фильтры</h2>
           <button type="button" class="button subtle filter-reset" id="reset" hidden>Сбросить всё</button>
         </div>
-        <div class="filter-fields">
-        <label class="filter-field"><span class="filter-caption">Кличка</span><span class="with-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-search"/></svg><input class="filter-input" id="search" type="search" placeholder="Кличка собаки" maxlength="100"></span></label>
+        <div class="filter-fields" id="filter-primary" role="group" aria-label="Основные фильтры">
+        <label class="filter-field"><span class="filter-caption">Кличка</span><span class="with-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-search"/></svg><input class="filter-input" id="search" type="search" placeholder="Кличка" maxlength="100"></span></label>
         <label class="filter-field"><span class="filter-caption">Владелец</span><input class="filter-input" id="owner" type="search" placeholder="Имя или фамилия" maxlength="100"></label>
         <label class="filter-field"><span class="filter-caption">Номер ВПКОС</span><input class="filter-input" id="regNumber" type="search" placeholder="Номер ВПКОС" maxlength="100"></label>
         <label class="filter-field"><span class="filter-caption">№ родословной FCI/РКФ</span><input class="filter-input" id="pedigreeNumber" type="search" placeholder="Номер родословной" maxlength="100"></label>
@@ -449,22 +489,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </div>
         </div>
         </div>
+        <details class="filter-additional" id="additional-filters">
+          <summary id="additional-filters-toggle">Дополнительные фильтры<span class="filter-extra-count" id="additional-filter-count" hidden></span></summary>
+          <div class="filter-fields" id="additional-filter-fields" role="group" aria-label="Дополнительные фильтры"></div>
+          <div class="archive-tools" id="personal-tools" hidden>
+            <button type="button" class="button" id="personal-filter">Показать все мои карточки</button>
+          </div>
+        </details>
         <p class="filter-date-error" id="date-error" role="alert" hidden>Начальная дата должна быть раньше конечной или совпадать с ней.</p>
       </section>
-      <div class="filter-bottom">
-        <div class="active-filters" id="active-filters" hidden aria-label="Выбранные фильтры"></div>
-        <template id="filter-chip-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-close"/></svg></template>
-        <div class="sort-box">
-          <span class="sr-only" id="sort-label">Сортировка</span>
-          <div class="dropdown" data-dropdown>
-            <input type="hidden" id="sort" value="newest">
-            <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="sort-options" aria-labelledby="sort-label sort-value">
-              <svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-sort"/></svg><span class="dropdown-value" id="sort-value">Сначала новые</span><svg class="icon select-chevron" aria-hidden="true" focusable="false"><use href="#ui-chevron"/></svg>
-            </button>
-            <div class="dropdown-options" id="sort-options" role="listbox" aria-labelledby="sort-label" hidden></div>
-          </div>
-        </div>
-      </div>
+      <div class="active-filters" id="active-filters" hidden aria-label="Выбранные фильтры"></div>
+      <template id="filter-chip-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-close"/></svg></template>
     </div>
     <div class="table-frame">
       <table class="catalog-table" role="table" aria-label="Собаки в реестре">
@@ -551,6 +586,53 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <button type="button" class="button subtle" id="live-profile-retry" hidden>Повторить загрузку</button>
   </section>
 
+  <section id="bon-editor" class="bon-page" aria-labelledby="bon-edit-title" hidden>
+    <a class="bon-page-back" id="bon-return" href="#" aria-label="Назад к карточке собаки" title="Назад к карточке собаки"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
+    <div class="bon-page-heading"><p class="profile-eyebrow">Бонитировка</p><h1 id="bon-edit-title" tabindex="-1"></h1></div>
+  <form id="bon-form" class="bon-page-form">
+    <div class="form-grid">
+      <label>Название расчёта или выставки<input name="show" maxlength="160" required list="bon-shows"><datalist id="bon-shows"></datalist></label>
+      <label>Дата экспертизы<input type="date" name="date" required></label>
+      <label class="wide">Группа пород по РОРС<select name="group" required></select></label>
+      <label>Экстерьер на этой выставке<select name="grade"></select></label>
+      <label>Место в экстерьерном ринге<input name="ringPlace" type="number" min="1" max="9999" step="1"></label>
+      <label>Племенные документы<select name="documents">
+        <option value="">Не проверены</option><option value="rors">Документы признаются РОРС</option>
+        <option value="foreign">Иностранные документы по договору с РОРС</option><option value="fci">Только родословная FCI/РКФ</option>
+      </select></label>
+      <label id="bon-national" hidden>Номер в национальной племкниге<input name="nationalBook" maxlength="80"></label>
+    </div>
+    <fieldset class="bon-section"><legend>Дипломы собаки</legend>
+      <p class="bon-muted">Добавьте дипломы, признаваемые РОРС. Дату можно оставить пустой, если известно, что диплом получен к этой выставке.</p>
+      <div id="bon-diplomas"></div><button class="button" type="button" id="bon-add-diploma">Добавить диплом</button>
+    </fieldset>
+    <fieldset class="bon-section"><legend>Происхождение</legend>
+      <p class="bon-muted">Число полных пар в каждом поколении. Значения из реестра можно уточнить по родословной.</p>
+      <div class="bon-fields" id="bon-pairs"></div>
+      <div class="bon-parents">
+        <label><input type="checkbox" name="fatherGrade">Отец · экстерьер от «хорошо»</label>
+        <label><input type="checkbox" name="motherGrade">Мать · экстерьер от «хорошо»</label>
+        <label><input type="checkbox" name="fatherDiploma">Отец · признанный диплом</label>
+        <label><input type="checkbox" name="motherDiploma">Мать · признанный диплом</label>
+      </div>
+    </fieldset>
+    <fieldset class="bon-section"><legend>Прямые потомки</legend>
+      <p class="bon-muted">По одной строке на потомка. Укажите его подтверждённую оценку и лучший профильный диплом в одиночку, полученные к выставке.</p>
+      <div id="bon-offspring"></div><button class="button" type="button" id="bon-add-offspring">Добавить потомка</button>
+    </fieldset>
+    <div class="bon-toolbar"><button class="button" type="button" id="bon-recalculate">Пересчитать бонитировку</button><span id="bon-recalculated" class="bon-muted" role="status"></span></div>
+    <section id="bon-result" class="bon-result" aria-label="Результат расчёта" aria-live="polite"></section>
+    <p class="bon-muted bon-source">Расчёт по <a class="source-link" href="https://rors-os.ru/vistavki/" target="_blank" rel="noopener noreferrer">правилам РОРС</a>. Класс на выставке определяет эксперт.</p>
+    <p id="bon-error" class="form-error" role="alert" hidden></p>
+    <div class="form-actions bon-actions"><button class="button danger" type="button" id="bon-delete" hidden>Удалить расчёт</button><button class="button primary" type="submit">Сохранить расчёт</button></div>
+  </form>
+      <details class="bon-history-details">
+        <summary>Расчёты по выставкам</summary>
+        <div class="bon-head"><p class="bon-muted">Сохранённые расчёты и планирование</p><button class="button" type="button" id="bon-new"></button></div>
+        <div id="bon-history"></div>
+      </details>
+  </section>
+
   <footer class="footer">
     <div class="footer-actions">
       <button type="button" class="button subtle" id="export" hidden>Скачать копию</button>
@@ -589,59 +671,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   </form>
 </dialog>
 
-<dialog id="bon-editor" aria-labelledby="bon-edit-title">
-  <form id="bon-form">
-    <div class="dialog-head"><h2 id="bon-edit-title">Бонитировка</h2><button class="button" type="button" id="bon-close" aria-label="Закрыть">×</button></div>
-    <div class="form-grid">
-      <label>Название расчёта или выставки<input name="show" maxlength="160" required list="bon-shows" autofocus><datalist id="bon-shows"></datalist></label>
-      <label>Дата экспертизы<input type="date" name="date" required></label>
-      <label class="wide">Группа пород по РОРС<select name="group" required></select></label>
-      <label>Экстерьер на этой выставке<select name="grade"></select></label>
-      <label>Место в экстерьерном ринге<input name="ringPlace" type="number" min="1" max="9999" step="1"></label>
-      <label>Племенные документы<select name="documents">
-        <option value="">Не проверены</option><option value="rors">Документы признаются РОРС</option>
-        <option value="foreign">Иностранные документы по договору с РОРС</option><option value="fci">Только родословная FCI/РКФ</option>
-      </select></label>
-      <label id="bon-national" hidden>Номер в национальной племкниге<input name="nationalBook" maxlength="80"></label>
-    </div>
-    <fieldset class="bon-section"><legend>Дипломы собаки</legend>
-      <p class="bon-muted">Добавьте дипломы, признаваемые РОРС. Дату можно оставить пустой, если известно, что диплом получен к этой выставке.</p>
-      <div id="bon-diplomas"></div><button class="button" type="button" id="bon-add-diploma">Добавить диплом</button>
-    </fieldset>
-    <fieldset class="bon-section"><legend>Происхождение</legend>
-      <p class="bon-muted">Число полных пар в каждом поколении. Значения из реестра можно уточнить по родословной.</p>
-      <div class="bon-fields" id="bon-pairs"></div>
-      <div class="bon-parents">
-        <label><input type="checkbox" name="fatherGrade">Отец · экстерьер от «хорошо»</label>
-        <label><input type="checkbox" name="motherGrade">Мать · экстерьер от «хорошо»</label>
-        <label><input type="checkbox" name="fatherDiploma">Отец · признанный диплом</label>
-        <label><input type="checkbox" name="motherDiploma">Мать · признанный диплом</label>
-      </div>
-    </fieldset>
-    <fieldset class="bon-section"><legend>Прямые потомки</legend>
-      <p class="bon-muted">По одной строке на потомка. Укажите его подтверждённую оценку и лучший профильный диплом в одиночку, полученные к выставке.</p>
-      <div id="bon-offspring"></div><button class="button" type="button" id="bon-add-offspring">Добавить потомка</button>
-    </fieldset>
-    <div class="bon-toolbar"><button class="button" type="button" id="bon-recalculate">Пересчитать бонитировку</button><span id="bon-recalculated" class="bon-muted" role="status"></span></div>
-    <section id="bon-result" class="bon-result" aria-label="Результат расчёта" aria-live="polite"></section>
-    <p class="bon-muted bon-source">Расчёт по <a class="source-link" href="https://rors-os.ru/vistavki/" target="_blank" rel="noopener noreferrer">правилам РОРС</a>. Класс на выставке определяет эксперт.</p>
-    <p id="bon-error" class="form-error" role="alert" hidden></p>
-    <div class="form-actions bon-actions"><button class="button danger" type="button" id="bon-delete" hidden>Удалить расчёт</button><button class="button" type="button" id="bon-cancel">Закрыть</button><button class="button primary" type="submit">Сохранить расчёт</button></div>
-  </form>
-      <details class="bon-history-details">
-        <summary>Расчёты по выставкам</summary>
-        <div class="bon-head"><p class="bon-muted">Сохранённые расчёты и планирование</p><button class="button" type="button" id="bon-new"></button></div>
-        <div id="bon-history"></div>
-      </details>
-</dialog>
-
 <script src="pedigree.js?v=profile-catalog-3"></script>
-<script src="bonitation.js?v=profile-catalog-3"></script>
-<script src="bonitation-ui.js?v=profile-catalog-3"></script>
+<script src="bonitation.js?v=bon-work-details-1"></script>
+<script src="bonitation-ui.js?v=bonitation-back-1"></script>
 <script src="profile-data.js?v=profile-catalog-3"></script>
 <script src="profile-design.js?v=profile-catalog-3"></script>
-<script src="profile-ui.js?v=profile-catalog-3"></script>
-<script src="bonitation-profile.js?v=profile-catalog-3"></script>
+<script src="profile-ui.js?v=bonitation-page-1"></script>
+<script src="bonitation-profile.js?v=bonitation-page-1"></script>
 <script>
   "use strict";
 
@@ -1208,7 +1244,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   const rorsApi = "https://api.rorsdb.ru";
-  const liveRoute = () => location.hash.match(/^#rors-live=(\d+)$/)?.[1];
+  const liveRoute = () => profileRouteHash().match(/^#rors-live=(\d+)$/)?.[1];
   let liveDetail;
 
   async function rorsGet(path, params, signal) {
@@ -1424,7 +1460,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     for (const item of dropdown.options) {
       const selected = item.value === dropdown.input.value;
       item.button.setAttribute("aria-selected", String(selected));
-      if (selected) dropdown.caption.textContent = item.label;
+      if (selected) {
+        dropdown.caption.textContent = item.label;
+        if (id === "sort") {
+          dropdown.toggle.title = "Сортировка: " + item.label;
+          dropdown.toggle.classList.toggle("is-active", dropdown.input.value !== "newest");
+        }
+      }
     }
   }
 
@@ -1505,6 +1547,56 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     setDropdownOptions("sort", [["Сначала новые", "newest"], ["По кличке", "name"], ["По рождению", "birth"]]);
   }
 
+  function updateAdditionalFilterCount() {
+    const count = [...byId("additional-filter-fields").querySelectorAll("input[id]")]
+      .filter((input) => Object.hasOwn(filterLabels, input.id) && input.value).length;
+    const badge = byId("additional-filter-count");
+    badge.textContent = "Выбрано: " + count;
+    badge.hidden = count === 0;
+  }
+
+  function mountFilterLayout() {
+    const primary = byId("filter-primary");
+    const secondary = byId("additional-filter-fields");
+    const additional = byId("additional-filters");
+    const priority = [["search", 140, 1.15], ["breed", 150, 1.4], ["sex", 90, .6], ["region", 150, 1.15], ["regNumber", 140, 1]];
+    const order = ["search", "breed", "sex", "region", "regNumber", "owner", "birthFrom", "birthTo",
+      "pedigreeNumber", "originNumber", "certificateNumber", "tattooNumber"];
+    const fields = new Map(order.map((id) => [id, filters[id].closest(".filter-field")]));
+    let previousCount = 0;
+    const layout = () => {
+      const width = Math.floor(primary.getBoundingClientRect().width);
+      if (!width) return;
+      const gap = parseFloat(getComputedStyle(primary).columnGap) || 0;
+      let count = 0, used = 0;
+      for (const [, minimum] of priority) {
+        const next = used + (count ? gap : 0) + minimum;
+        if (count && next > width) break;
+        used = next; count++;
+      }
+      if (count === previousCount) return;
+      previousCount = count;
+      const active = document.activeElement;
+      const focusedField = active?.closest(".filter-field");
+      const focus = focusedField && (focusedField.querySelector(".dropdown-toggle") || active);
+      closeDropdown();
+      const main = new Set(priority.slice(0, count).map(([id]) => id));
+      for (const id of order) (main.has(id) ? primary : secondary).append(fields.get(id));
+      primary.style.gridTemplateColumns = priority.slice(0, count).map(([, minimum, weight]) => "minmax(" + minimum + "px, " + weight + "fr)").join(" ");
+      if (focus) {
+        if (secondary.contains(focus)) additional.open = true;
+        focus.focus({ preventScroll: true });
+      }
+      updateAdditionalFilterCount();
+    };
+    additional.addEventListener("toggle", () => {
+      if (!additional.open && openDropdown && additional.contains(openDropdown.root)) closeDropdown();
+    });
+    layout();
+    if (typeof ResizeObserver === "function") new ResizeObserver(layout).observe(primary);
+    else window.addEventListener("resize", layout);
+  }
+
   function syncFilterOptions() {
     const dogs = collection();
     for (const [field, empty] of [["breed", "Все породы"], ["region", "Все регионы"]]) {
@@ -1523,7 +1615,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     button.onclick = () => {
       setFilterValue(field, "");
       refreshCatalog();
-      (dropdowns.get(field)?.toggle || filters[field]).focus();
+      const control = dropdowns.get(field)?.toggle || filters[field];
+      (control.closest("#additional-filter-fields") && !byId("additional-filters").open
+        ? byId("additional-filters-toggle") : control).focus();
     };
     return button;
   }
@@ -1534,6 +1628,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("reset").hidden = !chips.length;
     byId("active-filters").hidden = !chips.length;
     byId("active-filters").replaceChildren(...chips);
+    updateAdditionalFilterCount();
   }
 
   function refreshCatalog() {
@@ -1568,8 +1663,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     byId("date-error").hidden = !invalidRange;
     showActiveFilters(values);
     byId("catalog-title").textContent = archiveView ? "Все собаки" : favoritesOnly ? "Избранные собаки" : "Мои карточки";
-    byId("favorites").setAttribute("aria-pressed", String(!archiveView));
-    byId("archive-tab").setAttribute("aria-pressed", String(archiveView));
+    const showingFavorites = !archiveView && favoritesOnly;
+    byId("favorites").setAttribute("aria-pressed", String(showingFavorites));
+    byId("favorites").title = showingFavorites ? "Показать всех собак" : "Показать избранных собак";
     byId("personal-tools").hidden = archiveView;
     byId("personal-filter").textContent = favoritesOnly ? "Показать все мои карточки" : "Показать только избранные";
     updateArchiveButtons();
@@ -1590,7 +1686,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   function currentDog() {
-    const match = location.hash.match(/^#(dog|rors|rors-live)=(.*)$/);
+    const match = profileRouteHash().match(/^#(dog|rors|rors-live)=(.*)$/);
     if (!match) return undefined;
     try {
       const id = decodeURIComponent(match[2]);
@@ -1645,7 +1741,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         if (state?.error && !state.tree) throw new Error(state.error);
       }
       await renderProfileBlocks(dog, progress);
-      finishProfileLoading(loading);
+      if (!isProfileLoadingCurrent(loading)) return;
+      const page = bonitationRoute();
+      if (page) {
+        updateProfileLoading(loading, 100, "Расчёт готов");
+        openProfileBonitation(dog, page.createNew, { navigate: false, throwErrors: true });
+      } else finishProfileLoading(loading);
     })().catch((error) => {
       failProfileLoading(loading, error.message, () => {
         if (dog.archiveSourceId && !archive) archiveLoadAttempted = false;
@@ -1655,6 +1756,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   function render() {
+    if (bonitationRoute() && bonSession?.route === location.hash && records.some((dog) => dog.id === bonSession.dog.id)) {
+      showBonitationPage();
+      return;
+    }
+    byId("bon-editor").hidden = true;
+    document.title = "Аккерман — реестр собак";
     updateCatalogLoading();
     const onlineId = liveRoute();
     if (onlineId) {
@@ -1814,15 +1921,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   byId("favorites").onclick = () => {
-    favoritesOnly = true;
-    chooseCatalog(false);
+    if (!archiveView && favoritesOnly) chooseCatalog(true);
+    else {
+      favoritesOnly = true;
+      chooseCatalog(false);
+    }
   };
   byId("personal-filter").onclick = () => {
     favoritesOnly = !favoritesOnly;
     catalogPage = 0;
     renderCatalog();
   };
-  byId("archive-tab").onclick = () => chooseCatalog(true);
   byId("home").addEventListener("click", (event) => {
     event.preventDefault();
     chooseCatalog(true);
@@ -1884,12 +1993,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   window.addEventListener("hashchange", () => {
     render();
     window.scrollTo(0, 0);
-    if (currentDog()) byId("profile-title").focus({ preventScroll: true });
+    const heading = bonitationRoute() ? byId("bon-edit-title") : currentDog() && byId("profile-title");
+    if (heading && !heading.closest("[hidden]")) heading.focus({ preventScroll: true });
   });
   window.addEventListener("storage", (event) => {
     if (event.key === key) { startStorage(); render(); }
   });
   mountDropdowns();
+  mountFilterLayout();
   mountBonitation();
   startStorage();
   render();

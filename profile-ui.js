@@ -10,6 +10,7 @@ function startProfileLoading(name = "") {
   const ticket = { sequence: ++profileLoadingSequence, route: location.hash, progress: 0 };
   byId("profile").hidden = true;
   byId("catalog").hidden = true;
+  byId("bon-editor").hidden = true;
   byId("profile-loading").hidden = false;
   byId("profile-loading-name").textContent = name;
   byId("profile-loading-error").hidden = true;

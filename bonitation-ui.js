@@ -4,6 +4,41 @@ const bonParentFields = ["fatherGrade", "motherGrade", "fatherDiploma", "motherD
 const bonAgeLabels = { junior: "Младшая группа", middle: "Средняя группа", senior: "Старшая группа" };
 let bonSession;
 
+function bonitationRoute(hash = location.hash) {
+  const match = hash.match(/^(#(?:dog|rors|rors-live)=[^/?]+)\/bonitation(?:\?(.*))?$/);
+  if (!match) return null;
+  const params = new URLSearchParams(match[2] || "");
+  const savedId = params.get("assessment") || "";
+  return { returnHash: match[1], savedId, createNew: !savedId && params.get("new") === "1" };
+}
+
+function profileRouteHash() {
+  return bonitationRoute()?.returnHash || location.hash;
+}
+
+function bonitationHash(base, savedId = "", createNew = false) {
+  const params = new URLSearchParams();
+  if (savedId) params.set("assessment", savedId);
+  else if (createNew) params.set("new", "1");
+  return base + "/bonitation" + (params.size ? "?" + params : "");
+}
+
+function showBonitationPage() {
+  cancelProfileLoading();
+  byId("catalog-loading").hidden = true;
+  byId("catalog").hidden = true;
+  byId("profile").hidden = true;
+  byId("bon-editor").hidden = false;
+  byId("clear-demo").hidden = true;
+  document.title = "Бонитировка · " + bonSession.dog.name + " — Аккерман";
+}
+
+function returnBonitationPage({ invalidate = false } = {}) {
+  const destination = bonSession?.returnHash || bonitationRoute()?.returnHash || "";
+  if (invalidate) bonSession = null;
+  location.hash = destination;
+}
+
 function bonDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
   const date = new Date(value + "T00:00:00Z");
@@ -260,14 +295,18 @@ function draftBonitation(dog) {
   });
 }
 
-function openBonitation(dog, saved, initial) {
-  const dialog = byId("bon-editor");
+function openBonitation(dog, saved, initial, { createNew = false, navigate = true } = {}) {
   const form = byId("bon-form");
   const data = saved || initial || draftBonitation(dog);
-  bonSession = { dog, original: saved, snapshot: bonInput({ dog }).dog };
+  const base = profileRouteHash();
+  const returnHash = /^#(?:dog|rors|rors-live)=[^/?]+$/.test(base) ? base : "#dog=" + encodeURIComponent(dog.id);
+  const route = navigate ? bonitationHash(returnHash, saved?.id, createNew) : location.hash;
+  bonSession = { dog, original: saved, snapshot: bonInput({ dog }).dog, returnHash, route };
 
   form.reset();
-  byId("bon-edit-title").textContent = "Бонитировка · " + dog.name;
+  byId("bon-edit-title").textContent = dog.name;
+  byId("bon-edit-title").title = dog.name;
+  byId("bon-return").href = returnHash;
   const names = [...new Set(records.flatMap((record) => record.bonitations.map((entry) => entry.show)))].sort(alphabetic);
   byId("bon-shows").replaceChildren(...names.map((name) => new Option(name)));
   for (const name of ["show", "date", "group", "grade", "ringPlace", "documents", "nationalBook"]) {
@@ -283,8 +322,10 @@ function openBonitation(dog, saved, initial) {
   byId("bon-recalculated").textContent = "";
   byId("bon-delete").hidden = !saved;
   previewBonitation();
-  dialog.showModal();
-  dialog.scrollTop = 0;
+  if (navigate && location.hash !== route) location.hash = route;
+  showBonitationPage();
+  window.scrollTo(0, 0);
+  byId("bon-edit-title").focus({ preventScroll: true });
 }
 
 function bonReadForm() {
@@ -313,6 +354,40 @@ function bonDetails(title, content) {
   const details = node("details");
   details.append(node("summary", title), content);
   return details;
+}
+
+function bonWorkDiplomaLabel(diploma) {
+  const shortNames = {
+    squirrel: "б.", marten: "кун.", sable: "соб.", fur: "пушной зверь",
+    forestLaika: "бор.", pheasant: "ф.", elk: "лось", wildBoar: "в/к",
+    bear: "м.", penBoar: "к.", waterfowl: "вп", penBadger: "б/в", blood: "кс"
+  };
+  return [Bonitation.degrees[diploma.degree], shortNames[diploma.type] || Bonitation.trials[diploma.type],
+    diploma.work !== "solo" && Bonitation.formats[diploma.work]?.toLowerCase()].filter(Boolean).join(" ");
+}
+
+function bonWorkBreakdown(work, group) {
+  const diplomaLine = (label, diploma) => {
+    const item = node("li", label + " — " + (diploma ? bonWorkDiplomaLabel(diploma) + " — " : "")
+      + bonPoints(diploma?.points || 0));
+    if (diploma) item.title = bonDiplomaLabel(diploma);
+    return item;
+  };
+  const list = node("ul", undefined, "bon-work-breakdown");
+  list.append(diplomaLine("Основной диплом", work.main), diplomaLine("Дополнительный диплом", work.repeat));
+  if (group.versatility) {
+    const universal = node("li", "За универсальность — " + bonPoints(work.versatility.reduce((sum, diploma) => sum + diploma.points, 0)));
+    const groups = node("ul", undefined, "bon-versatility-groups");
+    if (group.versatilityGroups) {
+      group.versatilityGroups.forEach((types, index) => groups.append(diplomaLine((index + 1) + " группа",
+        work.versatility.find((diploma) => types.includes(diploma.type)))));
+    } else {
+      for (const diploma of work.versatility) groups.append(diplomaLine("Диплом", diploma));
+    }
+    if (groups.children.length) universal.append(groups);
+    list.append(universal);
+  }
+  return list;
 }
 
 function previewBonitation() {
@@ -366,7 +441,9 @@ function previewBonitation() {
     "Происхождение · " + bonNumber(result.origin) + " · полных поколений " + result.generations,
     "Потомство · " + result.offspringPoints + " · зачтено " + result.offspring.length
   ];
-  content.push(bonList(scores));
+  const scoreList = bonList(scores);
+  if (work) scoreList.firstElementChild.append(bonWorkBreakdown(work, Bonitation.groups[input.group]));
+  content.push(scoreList);
   if (work) {
     const workLines = ["Основной · " + bonDiplomaLabel(work.main) + " · +" + work.main.points];
     if (work.repeat) workLines.push("Повторный · " + bonDiplomaLabel(work.repeat) + " · +" + work.repeat.points);
@@ -422,7 +499,6 @@ function validateBonitation(data) {
 
 function mountBonitation() {
   const form = byId("bon-form");
-  const dialog = byId("bon-editor");
   replaceOptions(form.elements.group, "Выберите группу", Object.entries(Bonitation.groups).map(([key, group]) => [group.label, key]));
   replaceOptions(form.elements.grade, "Ещё не выставлена", Object.entries(Bonitation.grades).map(([key, label]) => [label, key]));
   const pairs = byId("bon-pairs");
@@ -443,13 +519,12 @@ function mountBonitation() {
     byId("bon-result").scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
   form.addEventListener("input", () => { byId("bon-recalculated").textContent = ""; });
-  byId("bon-close").onclick = byId("bon-cancel").onclick = () => dialog.close();
   byId("bon-delete").onclick = () => {
     const { original } = bonSession;
     if (!original || !confirm("Удалить расчёт для выставки «" + original.show + "»?")) return;
     try {
       saveBonitations((items) => items.filter((entry) => entry.id !== original.id));
-      dialog.close();
+      returnBonitationPage({ invalidate: true });
       byId("status").textContent = "Расчёт удалён.";
     } catch (error) { showBonError(error); }
   };
@@ -483,7 +558,7 @@ function mountBonitation() {
         data.id ||= newRecordId();
         return bonSession.original ? items.map((entry) => entry.id === data.id ? data : entry) : [...items, data];
       });
-      dialog.close();
+      returnBonitationPage({ invalidate: true });
       byId("status").textContent = "Расчёт бонитировки сохранён.";
     } catch (error) { showBonError(error); }
   });

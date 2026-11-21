@@ -26,6 +26,9 @@ const Bonitation = (() => {
   const houndGame = ["hare", "fox", "jackal"];
   const laikaProfiles = ["squirrel", "marten", "sable", "fur", "forestLaika", "pheasant", "elk", "wildBoar"];
   const laikaAdditional = ["bear", "penBoar", "waterfowl", "penBadger", "blood"];
+  const laikaVersatilityGroups = [
+    ["squirrel", "marten", "sable", "fur"], ["forestLaika", "pheasant"], ["elk", "wildBoar"], laikaAdditional
+  ];
   const terrierElite = ["foxEight", "foxNatural", "badgerNatural", "badgerP"];
   const terrierProfiles = [...terrierElite, "foxP"];
   const pointers = ["pointingField", "pointingForest"];
@@ -37,8 +40,8 @@ const Bonitation = (() => {
     asian: { label: "Афганские охотничьи борзые, тазы, тайганы", profile: ["coursing"], other: ["wolf"] },
     hound: { label: "Русские, русские пегие и эстонские гончие", profile: houndGame, other: [], hound: true },
     western: { label: "Западные гончие", profile: houndGame, other: ["penBoar", "blood", "waterfowl"], hound: true },
-    laika: { label: "Лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4 },
-    eastLaika: { label: "Восточносибирские лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4 },
+    laika: { label: "Лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4, versatilityGroups: laikaVersatilityGroups },
+    eastLaika: { label: "Восточносибирские лайки", profile: laikaProfiles, offspringProfile: [...laikaProfiles, "bear", "penBoar"], other: laikaAdditional, versatility: 4, versatilityGroups: laikaVersatilityGroups },
     earth: { label: "Норные", profile: terrierProfiles, other: ["penBoar", "penBadger", "blood", "waterfowl"], versatility: 4 },
     island: { label: "Островные легавые", profile: pointers, other: [] },
     continental: { label: "Континентальные легавые", profile: pointers, other: ["waterfowl", "penBadger", "blood", "penBoar"], versatility: 4 },
@@ -205,17 +208,14 @@ const Bonitation = (() => {
 
   function versatilityDiplomas(diplomas, main, key) {
     const limit = groups[key].versatility || 0;
-    const laikaTypes = [
-      ["squirrel", "marten", "sable", "fur"], ["forestLaika", "pheasant"], ["elk", "wildBoar"], laikaAdditional
-    ];
+    const trialGroups = groups[key].versatilityGroups;
     const used = new Set();
     const result = [];
     for (const diploma of diplomas) {
       if (result.length === limit) break;
       const { type } = diploma;
       if (type === main.type) continue;
-      const slot = limit === 4 && ["laika", "eastLaika"].includes(key)
-        ? laikaTypes.findIndex((list) => list.includes(type)) : type;
+      const slot = trialGroups ? trialGroups.findIndex((list) => list.includes(type)) : type;
       if (slot === -1 || used.has(slot)) continue;
       used.add(slot);
       result.push({ ...diploma, points: 4 - diploma.degree });
