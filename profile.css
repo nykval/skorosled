@@ -10,10 +10,6 @@
 .descendants-header, .descendants-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
 .descendants-header { justify-content: space-between; margin-bottom: 14px; }
 .profile-block .descendants-header h3 { margin: 0; }
-.descendants-count { color: var(--muted); font-size: .875rem; }
-.descendants-navigation { display: flex; gap: 8px; }
-.descendants-navigation[hidden] { display: none; }
-.descendants-navigation .button { min-height: 44px; padding: 6px 12px; font-size: .875rem; }
 .descendants-list { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: min(300px, 84%); gap: 12px; max-width: 100%; margin: 0; padding: 3px 3px 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: 3px; scrollbar-width: thin; scrollbar-color: #afc1aa transparent; list-style: none; }
 .descendants-list > li { min-width: 0; scroll-snap-align: start; }
 .descendants-list .descendants-card { box-sizing: border-box; height: 100%; min-height: 176px; padding: 14px; color: inherit; text-decoration: none; }
@@ -32,28 +28,16 @@
 #bon-auto summary, .bon-history-details > summary { cursor: pointer; font-size: .93rem; font-weight: 650; color: var(--green); }
 .bon-history-details { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .bon-history-details .bon-head { margin: 14px 0 0; }
-.event-table { table-layout: fixed; }
-.event-table th { background: var(--green-light); color: var(--green); font-size: .875rem; }
-.event-table td { vertical-align: top; font-size: .95rem; }
-.event-table tr + tr { border-top: 1px solid var(--line); }
-.event-table th:first-child { width: 45%; }
-.event-table th:nth-child(2) { width: 118px; }
-.trials-table th:first-child { width: 35%; }
 .profile-events-note { margin-top: 14px; color: var(--muted); white-space: pre-wrap; }
 @media (max-width: 600px) {
   .bon-auto-scores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile-block .profile-table th { width: 42%; }
-  .event-table th, .event-table td { padding: 9px 7px; font-size: .875rem; }
-  .event-table th:first-child { width: 38%; }
-  .event-table th:nth-child(2) { width: 88px; }
-  .trials-frame { overflow-x: auto; }
-  .trials-table { min-width: 620px; }
 }
 
 .profile-loading { --load-progress: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; width: 100%; padding: 24px; text-align: center; }
-body:has(#profile-loading:not([hidden])) .topbar,
-body:has(#profile-loading:not([hidden])) .footer { display: none; }
-body:has(#profile-loading:not([hidden])) main { display: grid; place-items: center; min-height: 100svh; padding-block: 0; }
+body:has(.profile-loading:not([hidden])) .topbar,
+body:has(.profile-loading:not([hidden])) .footer { display: none; }
+body:has(.profile-loading:not([hidden])) main { display: grid; place-items: center; min-height: 100svh; padding-block: 0; }
 .profile-loading-mark { position: relative; width: 112px; height: 112px; }
 .profile-loading-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .profile-loading-base { filter: grayscale(1); opacity: .18; }
@@ -63,3 +47,12 @@ body:has(#profile-loading:not([hidden])) main { display: grid; place-items: cent
 @media (prefers-reduced-motion: reduce) {
   .profile-loading-fill { transition: none; }
 }
+
+.profile-events-carousel { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: min(340px, 86%); gap: 12px; max-width: 100%; margin: 0; padding: 3px 3px 12px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: 3px; scrollbar-width: thin; scrollbar-color: #afc1aa transparent; }
+.profile-events-carousel > li { min-width: 0; scroll-snap-align: start; }
+.profile-event-card { height: 100%; min-height: 240px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #f8faf5; }
+#profile .profile-event-card h3 { margin: 0 0 10px; color: var(--text); font-size: 1rem; line-height: 1.45; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.profile-event-date { margin-bottom: 18px; color: var(--muted); font-size: .875rem; }
+.profile-event-details { display: grid; gap: 14px; margin: 0; }
+.profile-event-details dt { margin-bottom: 4px; color: var(--muted); font-size: .875rem; }
+.profile-event-details dd { margin: 0; color: var(--green); font-size: .9375rem; font-weight: 600; overflow-wrap: anywhere; }

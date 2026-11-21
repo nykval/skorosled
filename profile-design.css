@@ -14,14 +14,12 @@
 .profile-meta { display: flex; flex-wrap: wrap; gap: 7px 16px; margin-top: 12px; color: var(--muted); font-size: .9375rem; }
 .profile-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .profile-meta-item .profile-icon { width: 17px; height: 17px; }
-.profile-jump-nav { display: flex; gap: 6px; padding: 5px; margin-bottom: 24px; border: 1px solid var(--line); border-radius: 14px; background: #eaf0e5; overflow-x: auto; scrollbar-width: thin; }
-.profile-jump-nav button { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid transparent; border-radius: 9px; color: var(--green); background: transparent; font-size: .9375rem; font-weight: 600; white-space: nowrap; }
-.profile-jump-nav button:hover { background: var(--paper); border-color: var(--line); }
 #profile .profile-block { margin-top: 22px; padding: clamp(18px, 3vw, 26px); border-radius: var(--profile-radius); box-shadow: 0 3px 16px #263a2004; scroll-margin-top: 24px; }
 #profile .profile-block > h2 { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; font-size: 1.375rem; line-height: 1.25; letter-spacing: -.035em; }
 .profile-section-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; color: var(--green); background: #edf3e8; }
 .profile-section-icon .profile-icon { width: 21px; height: 21px; }
-.profile-section-count { display: inline-flex; align-items: center; justify-content: center; min-width: 27px; min-height: 27px; padding: 2px 8px; margin-left: auto; border-radius: 8px; background: #f0f3ed; color: var(--muted); font-size: .875rem; font-weight: 600; letter-spacing: 0; }
+.profile-section-label { flex: 1; min-width: 0; }
+.profile-section-count { display: inline-flex; flex: none; align-self: flex-start; align-items: center; justify-content: center; min-width: 27px; min-height: 27px; padding: 2px 8px; margin-left: auto; border-radius: 8px; background: #f0f3ed; color: var(--muted); font-size: .875rem; font-weight: 600; letter-spacing: 0; }
 #profile .bon-panel { border-color: #cad9c3; background: linear-gradient(115deg, #fff 30%, #f2f7ed); }
 #profile .bon-panel > h2 { margin-bottom: 18px; }
 #profile .bon-auto-total { font-size: clamp(1.75rem, 5vw, 2.25rem); }
@@ -42,11 +40,9 @@
 .profile-info-disclosure[open] > summary::after { transform: rotate(225deg); margin-top: 4px; }
 .profile-info-disclosure[open] > summary { margin-bottom: 6px; }
 #profile .profile-empty { padding: 18px; border: 1px dashed #d6e0d0; border-radius: 12px; background: #f8faf6; font-size: .9375rem; }
-#profile .event-table th { background: #f3f6f0; font-weight: 600; }
-#profile .event-table td { line-height: 1.6; }
-#profile .event-table td:first-child { font-weight: 550; }
 #profile .descendants-panel { margin-top: 28px; padding-top: 24px; }
-#profile .descendants-title h3 { display: inline-flex; align-items: center; gap: 8px; }
+#profile .descendants-title { width: 100%; }
+#profile .descendants-title h3 { display: flex; align-items: center; gap: 10px; width: 100%; }
 #profile .descendants-title h3 .profile-icon { color: var(--green); }
 #profile .descendants-card { background: #f8faf5; border-radius: 14px; }
 #profile .descendants-card:hover { background: #edf3e8; }
@@ -62,9 +58,6 @@
   #profile .profile-heading > .star { width: 44px; height: 44px; }
   .profile-meta { gap: 7px 12px; margin-top: 10px; font-size: .875rem; }
   .profile-meta-item:first-child { flex-basis: 100%; }
-  .profile-jump-nav { margin-inline: -2px; margin-bottom: 18px; }
-  .profile-jump-nav button { padding-inline: 12px; font-size: .875rem; }
-  .profile-jump-nav .profile-icon { width: 18px; height: 18px; }
   #profile .profile-block { margin-top: 16px; padding: 18px 16px; }
   #profile .profile-block > h2 { gap: 10px; margin-bottom: 18px; font-size: 1.25rem; }
   .profile-section-icon { width: 34px; height: 34px; border-radius: 10px; }
@@ -73,21 +66,7 @@
   .profile-info-grid > div { padding-block: 12px; }
   #profile .bon-profile-open { width: 100%; }
   #profile .profile-block .table-frame { border: 0; border-radius: 0; overflow: visible; }
-  #profile .event-table, #profile .event-table tbody { display: block; width: 100%; min-width: 0; }
-  #profile .event-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  #profile .event-table tr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; padding: 16px; border: 1px solid #dfe7da; border-radius: 12px; background: #fbfcfa; }
-  #profile .event-table tr + tr { margin-top: 12px; }
-  #profile .event-table td { display: block; padding: 0; border: 0; font-size: .9375rem; overflow-wrap: anywhere; }
-  #profile .event-table td:first-child { font-size: 1rem; font-weight: 600; }
-  #profile .event-table td:nth-child(2) { color: var(--muted); font-size: .875rem; }
-  #profile .event-table td:nth-child(n+3)::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: .875rem; font-weight: 400; }
-  #profile .event-table td:last-child { margin-top: 3px; padding-top: 10px; border-top: 1px solid #e3eadf; color: var(--green); font-weight: 550; }
 }
 @media (prefers-reduced-motion: reduce) {
   #profile *, #profile *::before, #profile *::after { scroll-behavior: auto !important; }
-}
-
-@media (min-width: 375px) and (max-width: 600px) {
-  .profile-jump-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 4px; overflow: visible; }
-  .profile-jump-nav button { flex-direction: column; gap: 5px; min-width: 0; padding: 9px 1px; letter-spacing: -.025em; }
 }

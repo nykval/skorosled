@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Аккерман — реестр собак</title>
 <link rel="icon" type="image/png" href="dog-logo.png">
-<link rel="stylesheet" href="pedigree.css">
-<link rel="stylesheet" href="profile.css">
-<link rel="stylesheet" href="bonitation-profile.css">
-<link rel="stylesheet" href="profile-design.css">
+<link rel="stylesheet" href="pedigree.css?v=profile-catalog-3">
+<link rel="stylesheet" href="profile.css?v=profile-catalog-3">
+<link rel="stylesheet" href="bonitation-profile.css?v=profile-catalog-3">
+<link rel="stylesheet" href="profile-design.css?v=profile-catalog-3">
 <style>
   :root {
     color-scheme: light;
@@ -118,8 +118,6 @@
   .filter-chip .icon { width: 16px; height: 16px; }
   .filter-date-error { margin-top: 8px; color: var(--danger); font-size: .88rem; }
   .archive-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 13px; }
-  .archive-source { display: inline-flex; gap: 5px; }
-  .archive-source .button[aria-pressed="true"] { background: var(--green-light); border-color: #c6d5c2; }
   .archive-tools .status { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
   .catalog-pages { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 12px; }
   .archive-event-group { margin-top: 15px; }
@@ -391,9 +389,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <p class="notice" id="notice" role="status" hidden></p>
   <section id="catalog">
     <div class="heading">
-      <div><h1 id="catalog-title">База РОРС</h1><p class="count" id="count" aria-live="polite"></p></div>
+      <div><h1 id="catalog-title">Все собаки</h1><p class="count" id="count" aria-live="polite"></p></div>
       <div class="tabs" aria-label="Записи" role="group">
-        <button type="button" id="archive-tab" aria-pressed="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-list"/></svg>База РОРС</button>
+        <button type="button" id="archive-tab" aria-pressed="true"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-list"/></svg>Все собаки</button>
         <button type="button" id="favorites" aria-pressed="false"><svg class="icon" aria-hidden="true" focusable="false"><use href="#ui-bookmark"/></svg>Избранные собаки</button>
       </div>
     </div>
@@ -401,17 +399,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <button type="button" class="button" id="personal-filter">Показать все мои карточки</button>
     </div>
     <div class="archive-tools" id="archive-tools" hidden>
-      <div class="archive-source" role="group" aria-label="Источник данных РОРС">
-        <button type="button" class="button" id="live-source" aria-pressed="true">Онлайн</button>
-        <button type="button" class="button" id="file-source" aria-pressed="false">Архив</button>
-      </div>
-      <p class="status" id="live-status" role="status"></p>
-      <p class="status" id="live-taxonomies-status" hidden>Не удалось загрузить список пород и регионов.</p>
-      <button type="button" class="button" id="live-retry" hidden>Повторить</button>
-      <button type="button" class="button" id="archive-retry" hidden>Повторить загрузку архива</button>
-      <button type="button" class="button" id="archive-import" hidden>Открыть выгрузку РОРС</button>
-      <input type="file" id="archive-file" accept=".jsonl,.ndjson,.json,.gz,application/json,application/x-ndjson,application/gzip" hidden>
-      <p class="status" id="archive-status" role="status"></p>
+      <p class="status" id="archive-status" role="alert"></p>
+      <button type="button" class="button" id="archive-retry" hidden>Повторить загрузку</button>
     </div>
     <div class="catalog-controls">
       <section class="filter-panel" aria-labelledby="filter-heading">
@@ -495,6 +484,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </nav>
   </section>
 
+  <section id="catalog-loading" class="profile-loading" hidden aria-labelledby="catalog-loading-title">
+    <div class="profile-loading-mark" aria-hidden="true">
+      <img src="dog-logo.png" alt="" class="profile-loading-base" width="112" height="112">
+      <img src="dog-logo.png" alt="" class="profile-loading-fill" width="112" height="112">
+    </div>
+    <h1 id="catalog-loading-title" class="sr-only">Загружаем список собак</h1>
+    <strong id="catalog-loading-percent" class="profile-loading-percent" aria-hidden="true">0%</strong>
+    <div id="catalog-loading-progress" class="sr-only" role="progressbar" aria-label="Загрузка списка собак" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+  </section>
   <section id="profile-loading" class="profile-loading" hidden aria-labelledby="profile-loading-title">
     <div class="profile-loading-mark" aria-hidden="true">
       <img src="dog-logo.png" alt="" class="profile-loading-base" width="112" height="112">
@@ -520,12 +518,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button type="button" class="button danger" id="remove">Удалить</button>
       </div>
     </div>
-    <nav class="profile-jump-nav" aria-label="Разделы карточки">
-      <button type="button" data-target="profile-information" data-icon="information">Информация</button>
-      <button type="button" data-target="profile-family" data-icon="pedigree">Родословная</button>
-      <button type="button" data-target="profile-shows" data-icon="trophy">Выставки</button>
-      <button type="button" data-target="profile-work" data-icon="activity">Испытания</button>
-    </nav>
     <section class="profile-block bon-panel" id="bon-panel" aria-labelledby="bon-title" hidden>
       <h2 id="bon-title">Баллы бонитировки</h2>
       <div id="bon-auto" aria-live="polite"></div>
@@ -541,15 +533,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </section>
     <section class="profile-block" id="profile-shows" aria-labelledby="exhibitions-title">
       <h2 id="exhibitions-title">Выставки и выводки</h2>
-      <div class="table-frame" id="profile-exhibitions-table" hidden>
-        <table class="event-table" aria-label="Выставки и выводки"><thead><tr><th scope="col">Мероприятие</th><th scope="col">Дата</th><th scope="col">Оценка</th></tr></thead><tbody id="profile-exhibitions"></tbody></table>
+      <div id="profile-exhibitions-table" hidden>
+        <ul id="profile-exhibitions" class="profile-events-carousel" aria-label="Выставки и выводки"></ul>
       </div>
       <p class="profile-empty" id="profile-exhibitions-empty"></p>
     </section>
     <section class="profile-block" id="profile-work" aria-labelledby="trials-title">
       <h2 id="trials-title">Испытания и состязания</h2>
-      <div class="table-frame trials-frame" id="profile-trials-table" hidden>
-        <table class="event-table trials-table" aria-label="Испытания и состязания"><thead><tr><th scope="col">Мероприятие</th><th scope="col">Дата</th><th scope="col">Вид испытаний</th><th scope="col">Результат</th></tr></thead><tbody id="profile-trials"></tbody></table>
+      <div id="profile-trials-table" hidden>
+        <ul id="profile-trials" class="profile-events-carousel" aria-label="Испытания и состязания"></ul>
       </div>
       <p class="profile-empty" id="profile-trials-empty"></p>
       <p class="profile-events-note" id="profile-achievements" hidden></p>
@@ -643,13 +635,13 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       </details>
 </dialog>
 
-<script src="pedigree.js"></script>
-<script src="bonitation.js"></script>
-<script src="bonitation-ui.js"></script>
-<script src="profile-data.js"></script>
-<script src="profile-design.js"></script>
-<script src="profile-ui.js"></script>
-<script src="bonitation-profile.js"></script>
+<script src="pedigree.js?v=profile-catalog-3"></script>
+<script src="bonitation.js?v=profile-catalog-3"></script>
+<script src="bonitation-ui.js?v=profile-catalog-3"></script>
+<script src="profile-data.js?v=profile-catalog-3"></script>
+<script src="profile-design.js?v=profile-catalog-3"></script>
+<script src="profile-ui.js?v=profile-catalog-3"></script>
+<script src="bonitation-profile.js?v=profile-catalog-3"></script>
 <script>
   "use strict";
 
@@ -694,9 +686,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   let favoritesOnly = true;
   let archiveView = true;
   const hostedArchivePath = "data/rors-public-2026-11-20.ndjson.gz";
-  const hostedArchiveName = "Архив РОРС от 20.11.2026";
-  const canLoadHostedArchive = ["http:", "https:"].includes(location.protocol);
-  let rorsSource = canLoadHostedArchive ? "file" : "live";
+  let archiveProgress = 0;
   let archiveLoading = false;
   let archiveLoadAttempted = false;
   let archiveLoadError = false;
@@ -947,7 +937,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       const dog = archiveDog(row, offset, length, line);
       if (byId.has(dog.id)) throw new Error("Повторяется идентификатор собаки в строке " + line + ".");
       byId.set(dog.id, dog);
-      if (byId.size % 5000 === 0) onProgress(byId.size);
+      if (byId.size % 5000 === 0) onProgress(byId.size, (offset + length) / file.size);
     });
     if (!byId.size) throw new Error("В выгрузке нет записей о собаках.");
     const children = new Map();
@@ -1030,9 +1020,21 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     });
   }
 
+  function updateCatalogLoading(progress = archiveProgress) {
+    archiveProgress = Math.max(archiveProgress, Math.min(100, Math.round(progress)));
+    const loader = byId("catalog-loading");
+    const visible = archiveLoading && !archive && archiveView && !currentDog() && !liveRoute();
+    loader.hidden = !visible;
+    if (visible) byId("catalog").hidden = true;
+    loader.style.setProperty("--load-progress", archiveProgress);
+    byId("catalog-loading-percent").textContent = archiveProgress + "%";
+    byId("catalog-loading-progress").setAttribute("aria-valuenow", String(archiveProgress));
+  }
+
   function updateArchiveButtons() {
-    byId("archive-import").disabled = archiveLoading;
-    byId("archive-retry").hidden = !archiveView || liveMode() || !archiveLoadError || !canLoadHostedArchive;
+    byId("archive-tools").hidden = !archiveView || !archiveLoadError;
+    byId("archive-retry").hidden = !archiveLoadError || archiveLoading;
+    updateCatalogLoading();
   }
 
   async function readSavedArchive(fileKey) {
@@ -1045,83 +1047,70 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     try {
       const response = await fetch(hostedArchivePath, { signal: request.signal });
       if (!response.ok || response.headers.get("Content-Type")?.includes("text/html")) {
-        throw new Error("Архив сайта сейчас недоступен.");
+        throw new Error("Список собак сейчас недоступен.");
       }
-      return new File([await response.blob()], hostedArchivePath.split("/").pop(), { type: "application/gzip" });
-    } finally {
-      clearTimeout(timeout);
-    }
+      const total = Number(response.headers.get("Content-Length"));
+      const parts = [];
+      if (response.body) {
+        const reader = response.body.getReader();
+        let received = 0;
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            parts.push(value);
+            received += value.byteLength;
+            if (total > 0) updateCatalogLoading(5 + 60 * received / total);
+          }
+        } finally { reader.releaseLock(); }
+      } else parts.push(await response.blob());
+      updateCatalogLoading(65);
+      return new File(parts, hostedArchivePath.split("/").pop(), { type: "application/gzip" });
+    } finally { clearTimeout(timeout); }
   }
 
-  function indexArchiveWithProgress(file) {
-    byId("archive-status").textContent = "Читаем выгрузку РОРС…";
-    return indexArchive(file, (count) => {
-      byId("archive-status").textContent = "Прочитано " + count.toLocaleString("ru-RU") + " записей…";
-    });
+  async function indexArchiveWithProgress(file) {
+    updateCatalogLoading(75);
+    const indexed = await indexArchive(file, (_count, fraction) => updateCatalogLoading(75 + 23 * fraction));
+    updateCatalogLoading(99);
+    return indexed;
   }
 
   async function loadHostedArchive() {
     const cached = await readSavedArchive(hostedArchivePath);
     if (cached?.file) {
       try {
+        updateCatalogLoading(65);
         return await indexArchiveWithProgress(await archiveFile(cached.file));
       } catch {
-        // A broken browser copy can be replaced by downloading the archive again.
+        // Replace an unreadable browser copy with the bundled data.
       }
     }
-    byId("archive-status").textContent = "Скачиваем архив РОРС…";
     const file = await fetchHostedArchive();
     const indexed = await indexArchiveWithProgress(await archiveFile(file));
     await archiveStorage("readwrite", { file }, hostedArchivePath).catch(() => {});
     return indexed;
   }
 
-  async function attachArchive(file, name, save) {
+  async function attachArchive() {
     if (archiveLoading) return;
-    const automatic = !file;
     archiveLoading = true;
     archiveLoadAttempted = true;
     archiveLoadError = false;
+    archiveProgress = 0;
+    byId("archive-status").textContent = "";
     updateArchiveButtons();
-    byId("archive-status").textContent = automatic ? "Открываем архив РОРС…" : "Читаем выгрузку…";
     try {
-      let note = name || "Локальная выгрузка";
-      if (automatic) {
-        const saved = await readSavedArchive();
-        if (saved?.file) {
-          try {
-            archive = await indexArchiveWithProgress(saved.file);
-            note = saved.name || note;
-          } catch (error) {
-            if (!canLoadHostedArchive) throw error;
-          }
-        }
-        if (!archive && canLoadHostedArchive) {
-          archive = await loadHostedArchive();
-          note = hostedArchiveName;
-        }
-      } else {
-        const source = await archiveFile(file);
-        archive = await indexArchiveWithProgress(source);
-        if (save) {
-          try {
-            await archiveStorage("readwrite", { file: source, name: note });
-          } catch {
-            note += " · Открыта до закрытия вкладки.";
-          }
-        }
-      }
-      byId("archive-status").textContent = archive ? note : "";
+      archive = await loadHostedArchive();
+      updateCatalogLoading(100);
       catalogPage = 0;
     } catch (error) {
-      archiveLoadError = automatic && !archive;
-      byId("archive-status").textContent = automatic && canLoadHostedArchive
-        ? "Не удалось открыть архив сайта. Повторите загрузку, выберите файл или откройте базу онлайн."
-        : error.message || "Не удалось открыть выгрузку.";
+      archiveLoadError = !archive;
+      byId("archive-status").textContent = "Не удалось загрузить список собак. Проверьте соединение и повторите загрузку.";
     } finally {
       archiveLoading = false;
       updateArchiveButtons();
-      if ((archiveView && !liveMode()) || location.hash.startsWith("#rors=") || currentDog()?.archiveSourceId) render();
+      if (archiveView || location.hash.startsWith("#rors=") || currentDog()?.archiveSourceId) render();
       document.dispatchEvent(new Event("profile-archive-ready"));
     }
   }
@@ -1219,16 +1208,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   const rorsApi = "https://api.rorsdb.ru";
-  const rorsTextFields = {
-    search: "name", owner: "owner", regNumber: "vpkos_num", pedigreeNumber: "fci_num",
-    originNumber: "spravka_num", certificateNumber: "docs_num", tattooNumber: "stamp_num"
-  };
-  const liveMode = () => archiveView && rorsSource === "live";
   const liveRoute = () => location.hash.match(/^#rors-live=(\d+)$/)?.[1];
-  let liveCatalogRequest;
   let liveDetail;
-  let liveTaxonomies;
-  let liveTaxonomiesRequest;
 
   async function rorsGet(path, params, signal) {
     const url = new URL(path, rorsApi);
@@ -1266,77 +1247,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       originDate: sourceDate(row.spravka_date),
       updated: sourceDate(row.updated)
     };
-  }
-
-  function rorsSearchParams(values, page) {
-    const filters = [];
-    for (const [local, remote] of Object.entries(rorsTextFields)) {
-      // Commas and semicolons delimit this API's filter expression.
-      const pattern = (values[local] || "").trim().split(/[,;]+/)
-        .map((part) => part.trim().replace(/[\\%_]/g, "\\$&")).filter(Boolean).join("%");
-      if (pattern) filters.push(remote + ",ilike,%" + pattern + "%");
-    }
-    if (values.sex) filters.push("gender,==," + (values.sex === "male"));
-    for (const key of ["breed", "region"]) {
-      const id = liveTaxonomies?.[key]?.get(values[key]);
-      if (id != null) filters.push(key + "_id,==," + id);
-    }
-    if (values.birthFrom) filters.push("birthday_date,>=," + values.birthFrom);
-    if (values.birthTo) filters.push("birthday_date,<=," + values.birthTo);
-    filters.push("accepted,==,true");
-    const sort = values.sort === "name" ? ["name", "asc"] : values.sort === "birth"
-      ? ["birthday_date", "desc"] : ["id", "desc"];
-    return { limit: pageSize, offset: page * pageSize, filters: filters.join(";"), sort_by: sort[0], order: sort[1] };
-  }
-
-  async function loadLiveTaxonomies() {
-    if (liveTaxonomies || liveTaxonomiesRequest) return;
-    const request = rorsGet("/api/taxonomies_all");
-    liveTaxonomiesRequest = request;
-    try {
-      const data = await request;
-      if (!Array.isArray(data.breeds) || !Array.isArray(data.regions)) throw new Error("Неизвестный формат справочников.");
-      const entries = (items) => new Map(items
-        .filter((item) => typeof item?.name === "string" && /^\d+$/.test(item.id))
-        .map((item) => [item.name, item.id]));
-      liveTaxonomies = { breed: entries(data.breeds), region: entries(data.regions) };
-      byId("live-taxonomies-status").hidden = true;
-      if (liveMode()) syncFilterOptions();
-    } catch {
-      if (liveMode()) byId("live-taxonomies-status").hidden = false;
-    } finally {
-      if (liveTaxonomiesRequest === request) liveTaxonomiesRequest = null;
-    }
-  }
-
-  async function renderLiveCatalog(values) {
-    liveCatalogRequest?.abort();
-    const request = new AbortController();
-    liveCatalogRequest = request;
-    byId("live-retry").hidden = true;
-    byId("live-status").textContent = "Загружаем каталог РОРС…";
-    showCatalogPage([], null, "Загружаем записи…");
-    try {
-      const result = await rorsGet("/api/dogs", rorsSearchParams(values, catalogPage), request.signal);
-      if (request.signal.aborted || !liveMode() || liveRoute()) return;
-      if (!Array.isArray(result.dogs) || !Number.isFinite(Number(result.cursor?.total_count))) {
-        throw new Error("РОРС вернул каталог в неизвестном формате.");
-      }
-      const count = Number(result.cursor.total_count);
-      if (catalogPage > 0 && catalogPage * pageSize >= count) {
-        catalogPage = Math.max(0, Math.ceil(count / pageSize) - 1);
-        renderCatalog();
-        return;
-      }
-      const dogs = result.dogs.filter((dog) => /^\d+$/.test(dog?.id)).map(rorsDog);
-      showCatalogPage(dogs, count, "По этому запросу собак не найдено.");
-      byId("live-status").textContent = "Данные из каталога РОРС";
-    } catch (error) {
-      if (request.signal.aborted || !liveMode() || liveRoute()) return;
-      byId("live-status").textContent = error.name === "TypeError" ? "Связь с РОРС недоступна." : error.message;
-      byId("live-retry").hidden = false;
-      showCatalogPage([], null, "Не удалось загрузить каталог. Можно повторить запрос или открыть выгрузку.");
-    }
   }
 
   function liveRelation(id, name) {
@@ -1598,7 +1508,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   function syncFilterOptions() {
     const dogs = collection();
     for (const [field, empty] of [["breed", "Все породы"], ["region", "Все регионы"]]) {
-      const choices = liveMode() ? [...(liveTaxonomies?.[field]?.keys() || [])].sort(alphabetic) : listValues(field, dogs);
+      const choices = listValues(field, dogs);
       setDropdownOptions(field, [[empty, ""], ...choices.map((value) => [value, value])]);
     }
   }
@@ -1655,31 +1565,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   function renderCatalog() {
     const values = Object.fromEntries(Object.entries(filters).map(([id, input]) => [id, input.value]));
     const invalidRange = Boolean(values.birthFrom && values.birthTo && values.birthFrom > values.birthTo);
-    const online = liveMode();
     byId("date-error").hidden = !invalidRange;
     showActiveFilters(values);
-    byId("catalog-title").textContent = archiveView ? "База РОРС" : favoritesOnly ? "Избранные собаки" : "Мои карточки";
+    byId("catalog-title").textContent = archiveView ? "Все собаки" : favoritesOnly ? "Избранные собаки" : "Мои карточки";
     byId("favorites").setAttribute("aria-pressed", String(!archiveView));
     byId("archive-tab").setAttribute("aria-pressed", String(archiveView));
     byId("personal-tools").hidden = archiveView;
     byId("personal-filter").textContent = favoritesOnly ? "Показать все мои карточки" : "Показать только избранные";
-    byId("archive-tools").hidden = !archiveView;
-    byId("live-source").setAttribute("aria-pressed", String(online));
-    byId("file-source").setAttribute("aria-pressed", String(!online));
-    byId("live-status").hidden = !online;
-    byId("archive-status").hidden = online;
-    byId("archive-import").hidden = online;
     updateArchiveButtons();
-    if (archiveView && !online && !archiveLoadAttempted) void attachArchive();
+    if (archiveView && !archiveLoadAttempted) void attachArchive();
     byId("export").textContent = archiveView ? "Скачать копию своих записей" : "Скачать копию";
-    if (online && !invalidRange) {
-      void renderLiveCatalog(values);
-      return;
-    }
-    liveCatalogRequest?.abort();
-    byId("live-retry").hidden = true;
-    if (online && invalidRange) byId("live-status").textContent = "Уточните диапазон дат.";
-    if (!online) byId("live-taxonomies-status").hidden = true;
     const dogs = archiveView && archive ? sortedArchive(values.sort) : collection();
     const visible = invalidRange ? [] : availableDogs(dogs,
       { ...values, favorites: favoritesOnly && !archiveView }, archiveView);
@@ -1688,7 +1583,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const narrowed = Object.keys(filterLabels).some((field) => values[field]);
     const empty = invalidRange ? "Уточните даты рождения в фильтрах."
       : archiveView && !archive ? archiveLoading ? "Загружаем каталог РОРС…"
-        : "Выберите файл выгрузки или переключитесь на онлайн-базу."
+        : "Не удалось загрузить список собак. Нажмите «Повторить загрузку»."
       : !dogs.length ? "Добавьте первую собаку в реестр."
       : favoritesOnly && !narrowed ? "Пока нет избранных собак." : "По этому запросу собак не найдено.";
     showCatalogPage(visible.slice(start, start + pageSize), visible.length, empty);
@@ -1760,11 +1655,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   }
 
   function render() {
+    updateCatalogLoading();
     const onlineId = liveRoute();
     if (onlineId) {
       archiveView = true;
-      rorsSource = "live";
-      liveCatalogRequest?.abort();
       byId("catalog").hidden = true;
       byId("profile").hidden = true;
       byId("clear-demo").hidden = true;
@@ -1777,20 +1671,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     const dog = currentDog();
     if (location.hash.startsWith("#rors=")) {
       archiveView = true;
-      rorsSource = "file";
     } else if (dog) {
       archiveView = false;
     }
     byId("catalog").hidden = Boolean(dog);
     byId("profile").hidden = !dog;
     if (dog) {
-      liveCatalogRequest?.abort();
       renderProfile(dog);
     } else {
       cancelProfileLoading();
       syncFilterOptions();
       renderCatalog();
-      if (liveMode()) void loadLiveTaxonomies();
     }
     byId("clear-demo").hidden = archiveView || !records.some((item) => item.demo);
   }
@@ -1936,16 +1827,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     event.preventDefault();
     chooseCatalog(true);
   });
-  function chooseRorsSource(source) {
-    if (rorsSource === source) return;
-    for (const field of Object.keys(filterLabels)) setFilterValue(field, "");
-    rorsSource = source;
-    catalogPage = 0;
-    render();
-  }
-  byId("live-source").onclick = () => chooseRorsSource("live");
-  byId("file-source").onclick = () => chooseRorsSource("file");
-  byId("live-retry").onclick = () => { void loadLiveTaxonomies(); renderCatalog(); };
   byId("live-profile-retry").onclick = () => {
     const dog = currentDog();
     if (dog && !dog.rors && dog.archiveSourceId) {
@@ -1954,12 +1835,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     } else if (liveRoute()) void loadLiveProfile(liveRoute());
   };
   byId("archive-retry").onclick = () => { void attachArchive(); };
-  byId("archive-import").onclick = () => byId("archive-file").click();
-  byId("archive-file").onchange = (event) => {
-    const file = event.currentTarget.files[0];
-    event.currentTarget.value = "";
-    if (file) void attachArchive(file, file.name, true);
-  };
   byId("page-prev").onclick = () => {
     if (catalogPage > 0) { catalogPage--; renderCatalog(); }
   };
@@ -1975,7 +1850,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     if (input.type !== "hidden") input.addEventListener("input", () => {
       if (!archiveView) { refreshCatalog(); return; }
       clearTimeout(filterTimer);
-      filterTimer = setTimeout(refreshCatalog, liveMode() ? 480 : 140);
+      filterTimer = setTimeout(refreshCatalog, 140);
     });
   }
 

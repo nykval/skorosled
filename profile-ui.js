@@ -3,7 +3,6 @@
 const profileSourceCache = new Map();
 const profileChildrenCache = new Map();
 let profileRenderToken = 0;
-let descendantsResizeObserver = null;
 
 let profileLoadingSequence = 0;
 
@@ -58,6 +57,10 @@ function profileSourceId(dog) {
   return dog.rors ? String(dog.id) : dog.archiveSourceId || "";
 }
 
+function hasCompleteProfileEvents(events) {
+  return Array.isArray(events?.exhibition_evals) && Array.isArray(events?.competition_evals);
+}
+
 function profileEvents(dog) {
   if (dog.live && liveDetail?.dog?.id === dog.id) return liveDetail.events || {};
   const source = profileSourceCache.get((dog.live ? "live:" : "") + profileSourceId(dog));
@@ -101,30 +104,45 @@ async function loadProfileChildren(dog) {
   return loaded;
 }
 
-async function readProfileSource(dog) {
+async function readProfileSource(dog, { required = false } = {}) {
   const id = profileSourceId(dog);
   if (!id) return { dog, events: profileEvents(dog) };
   if (dog.live && liveDetail?.dog?.id === id) return { dog, events: liveDetail.events || {} };
   const cacheKey = (dog.live ? "live:" : "") + id;
-  if (profileSourceCache.has(cacheKey)) return profileSourceCache.get(cacheKey);
-  if (dog.live) {
-    const results = await Promise.allSettled([
-      rorsEvaluations("/api/exhevals", "exhibition_evals", id),
-      rorsEvaluations("/api/compevals", "competition_evals", id)
-    ]);
-    const result = { dog, events: { exhibition_evals: results[0].value, competition_evals: results[1].value },
-      partial: results.some((entry) => entry.status === "rejected") };
+  const cached = profileSourceCache.get(cacheKey);
+  if (cached && !cached.partial) return cached;
+  const archived = archive?.byId.get(id);
+  if (archived && !dog.live) {
+    const row = await readArchiveRecord(archive.file, archived);
+    const result = { dog: archived, events: ProfileData.cleanEvents(row) || {} };
     profileSourceCache.set(cacheKey, result);
     return result;
   }
-  const archived = archive?.byId.get(id);
-  if (archived) {
-    const row = await readArchiveRecord(archive.file, archived);
-    const result = { dog: archived, events: ProfileData.cleanEvents(row) || {} };
-    profileSourceCache.set(id, result);
+  if (!dog.live && hasCompleteProfileEvents(dog.sourceEvents)) {
+    const result = { dog, events: dog.sourceEvents };
+    profileSourceCache.set(cacheKey, result);
     return result;
   }
-  return { dog, events: profileEvents(dog) };
+  if (!/^\d+$/.test(id)) return { dog, events: profileEvents(dog) };
+  const results = await Promise.allSettled([
+    rorsEvaluations("/api/exhevals", "exhibition_evals", id),
+    rorsEvaluations("/api/compevals", "competition_evals", id)
+  ]);
+  const saved = dog.sourceEvents || {};
+  const fields = ["exhibition_evals", "competition_evals"];
+  const events = {};
+  const missing = [];
+  results.forEach((entry, index) => {
+    const field = fields[index];
+    if (entry.status === "fulfilled") events[field] = entry.value;
+    else if (Array.isArray(saved[field])) events[field] = saved[field];
+    else missing.push(index === 0 ? "выставки и выводки" : "испытания и состязания");
+  });
+  if (required && missing.length) throw new Error("Не удалось загрузить: " + missing.join(", ") + ". Повторите загрузку.");
+  const result = { dog, events, partial: results.some((entry) => entry.status === "rejected") };
+  // A failed response is never remembered as an empty, successfully loaded record.
+  profileSourceCache.set(cacheKey, result);
+  return result;
 }
 
 function renderBasicInformation(dog) {
@@ -158,73 +176,90 @@ function renderBasicInformation(dog) {
   panel.replaceChildren(...content);
 }
 
+function wireProfileCarousel(list) {
+  list.tabIndex = 0;
+  list.addEventListener("keydown", (event) => {
+    if (event.target !== list || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    if (event.key === "Home" || event.key === "End") {
+      list.scrollTo({ left: event.key === "Home" ? 0 : list.scrollWidth, behavior });
+    } else {
+      const step = list.firstElementChild.getBoundingClientRect().width + parseFloat(getComputedStyle(list).columnGap);
+      list.scrollBy({ left: (event.key === "ArrowLeft" ? -1 : 1) * step, behavior });
+    }
+  });
+}
+
+function profileEventCard(title, date, fields) {
+  const item = node("li");
+  const card = node("article", undefined, "profile-event-card");
+  card.append(node("h3", title), node("p", date || "Дата не указана", "profile-event-date"));
+  const details = node("dl", undefined, "profile-event-details");
+  for (const [label, value] of fields) {
+    if (!value) continue;
+    const field = node("div"); field.append(node("dt", label), node("dd", value)); details.append(field);
+  }
+  card.append(details); item.append(card);
+  return item;
+}
+
 function renderProfileEvents(dog) {
   const events = profileEvents(dog);
-  const fill = (id, entries, format, empty) => {
-    const body = byId(id);
-    body.replaceChildren();
-    for (const entry of [...(entries || [])].sort((a, b) => ProfileData.date(b.common_exhibition_start_date || b.start_date).localeCompare(ProfileData.date(a.common_exhibition_start_date || a.start_date)))) {
-      const row = node("tr");
-      format(entry).forEach((value, index) => {
-        const cell = node("td", value || "—");
-        cell.dataset.label = (id === "profile-trials" ? ["Мероприятие", "Дата", "Вид испытаний", "Результат"] : ["Мероприятие", "Дата", "Оценка"])[index];
-        row.append(cell);
-      });
-      body.append(row);
-    }
-    byId(id + "-empty").hidden = body.children.length > 0;
-    byId(id + "-table").hidden = body.children.length === 0;
+  const fill = (id, entries, make, empty) => {
+    const list = byId(id);
+    const items = [...(entries || [])].filter((entry) => entry && typeof entry === "object")
+      .sort((a, b) => ProfileData.date(b.common_exhibition_start_date || b.exhibition_start_date || b.start_date)
+        .localeCompare(ProfileData.date(a.common_exhibition_start_date || a.exhibition_start_date || a.start_date)));
+    list.replaceChildren(...items.map(make));
+    if (!list.dataset.carouselReady) { wireProfileCarousel(list); list.dataset.carouselReady = "true"; }
+    byId(id + "-empty").hidden = items.length > 0;
+    byId(id + "-table").hidden = items.length === 0;
     byId(id + "-empty").textContent = empty;
-    decorateProfileHeading(byId(id === "profile-trials" ? "trials-title" : "exhibitions-title"), id === "profile-trials" ? "activity" : "trophy", body.children.length);
+    decorateProfileHeading(byId(id === "profile-trials" ? "trials-title" : "exhibitions-title"), id === "profile-trials" ? "activity" : "trophy", items.length);
   };
-  fill("profile-exhibitions", events.exhibition_evals, (entry) => {
-    const evaluation = [ProfileData.gradeLabel(entry.exterior_type), ProfileData.classLabel(entry.tclass)];
-    if (entry.complex_eval && Number(entry.complex_eval) > 0) evaluation.push("Комплексная оценка: " + bonPoints(Number(entry.complex_eval)));
-    return [sourceLabel(entry.common_exhibition_name, entry.title_name, entry.name) || "Выставка или выводка",
-      formatDate(sourceDate(entry.common_exhibition_start_date || entry.exhibition_start_date)), evaluation.filter(Boolean).join(" · ")];
-  }, "Сведения о выставках и выводках пока не внесены.");
-  fill("profile-trials", events.competition_evals, (entry) => {
-    const diploma = { I: "Диплом I степени", II: "Диплом II степени", III: "Диплом III степени", "б/д": "Без диплома", "сн": "Снятие с испытаний" }[entry.diploma] || entry.diploma;
-    const result = [diploma];
-    if (entry.rating_total != null && entry.rating_total !== "") result.push("Результат: " + bonPoints(Number(entry.rating_total)));
-    return [sourceLabel(entry.competition, entry.name) || "Испытание или состязание", formatDate(sourceDate(entry.start_date)),
-      (entry.game_species || []).join(", ") || "Не указан", result.filter(Boolean).join(" · ")];
-  }, "Сведения об испытаниях и состязаниях пока не внесены.");
-  if (!(events.competition_evals || []).length && (dog.bonitations || []).some((entry) => entry.diplomas.length)) {
+  fill("profile-exhibitions", events.exhibition_evals, (entry) => profileEventCard(
+    sourceLabel(entry.common_exhibition_name, entry.title_name, entry.name) || "Выставка или выводка",
+    formatDate(sourceDate(entry.common_exhibition_start_date || entry.exhibition_start_date)), [
+      ["Оценка", ProfileData.gradeLabel(entry.exterior_type)],
+      ["Племенной класс", ProfileData.classLabel(entry.tclass)],
+      ["Комплексная оценка", Number(entry.complex_eval) > 0 ? bonPoints(Number(entry.complex_eval)) : ""]
+    ]), "Сведения о выставках и выводках пока не внесены.");
+  let trials = events.competition_evals || [];
+  if (!trials.length) {
     const diplomas = new Map();
-    for (const assessment of dog.bonitations) for (const entry of assessment.diplomas) {
-      diplomas.set(JSON.stringify(entry), entry);
+    for (const assessment of dog.bonitations || []) for (const entry of assessment.diplomas || []) {
+      diplomas.set(JSON.stringify(entry), {
+        competition: entry.reference || "Диплом из сохранённого расчёта", start_date: entry.date,
+        diploma: Bonitation.degrees[entry.degree],
+        game_species: [Bonitation.trials[entry.type], Bonitation.formats[entry.work]].filter(Boolean)
+      });
     }
-    const rows = [...diplomas.values()].map((entry) => {
-      const row = node("tr");
-      for (const value of [entry.reference || "Диплом из сохранённого расчёта", formatDate(entry.date),
-        Bonitation.trials[entry.type] + " · " + Bonitation.formats[entry.work], "Диплом " + Bonitation.degrees[entry.degree] + " степени"]) {
-        const cell = node("td", value);
-        cell.dataset.label = ["Мероприятие", "Дата", "Вид испытаний", "Результат"][row.children.length];
-        row.append(cell);
-      }
-      return row;
-    });
-    byId("profile-trials").replaceChildren(...rows);
-    byId("profile-trials-empty").hidden = true;
-    byId("profile-trials-table").hidden = false;
-    decorateProfileHeading(byId("trials-title"), "activity", rows.length);
+    trials = [...diplomas.values()];
   }
+  fill("profile-trials", trials, (entry) => {
+    const diploma = { I: "Диплом I степени", II: "Диплом II степени", III: "Диплом III степени", "б/д": "Без диплома", "сн": "Снятие с испытаний" }[entry.diploma] || entry.diploma;
+    return profileEventCard(sourceLabel(entry.competition, entry.name) || "Испытание или состязание",
+      formatDate(sourceDate(entry.start_date)), [
+        ["Вид испытаний", (entry.game_species || []).join(", ") || "Не указан"],
+        ["Результат", diploma || "Не указан"],
+        ["Баллы", entry.rating_total != null && entry.rating_total !== "" && Number.isFinite(Number(entry.rating_total)) ? bonPoints(Number(entry.rating_total)) : ""]
+      ]);
+  }, "Сведения об испытаниях и состязаниях пока не внесены.");
   byId("profile-achievements").textContent = dog.achievements || "";
   byId("profile-achievements").hidden = !dog.achievements;
 }
 
 function renderDescendants(dog) {
-  descendantsResizeObserver?.disconnect();
   const section = node("section", undefined, "descendants-panel");
   section.setAttribute("aria-label", "Потомки собаки «" + dog.name + "»");
   const children = profileChildren(dog);
   const header = node("div", undefined, "descendants-header");
   const title = node("div", undefined, "descendants-title");
   const descendantsHeading = node("h3", "Потомки");
-  descendantsHeading.prepend(profileIcon("paw"));
+  decorateProfileHeading(descendantsHeading, "paw", children.length);
   title.append(descendantsHeading);
-  if (children.length) title.append(node("span", "Всего: " + children.length, "descendants-count"));
   header.append(title);
   section.append(header);
   if (!children.length) {
@@ -250,42 +285,8 @@ function renderDescendants(dog) {
     item.append(card);
     list.append(item);
   }
-  const navigation = node("div", undefined, "descendants-navigation");
-  navigation.setAttribute("role", "group");
-  navigation.setAttribute("aria-label", "Листание потомков");
-  navigation.hidden = true;
-  const move = (direction) => {
-    const positions = [...list.children].map((item) => item.offsetLeft - list.firstElementChild.offsetLeft);
-    const target = direction > 0 ? positions.find((left) => left > list.scrollLeft + 2)
-      : positions.reverse().find((left) => left < list.scrollLeft - 2);
-    list.scrollTo({ left: target ?? (direction > 0 ? list.scrollWidth : 0),
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  };
-  const previous = bonButton("Назад", () => move(-1), "button");
-  const next = bonButton("Далее", () => move(1), "button");
-  previous.setAttribute("aria-label", "Предыдущая карточка потомка");
-  next.setAttribute("aria-label", "Следующая карточка потомка");
-  navigation.append(previous, next);
-  header.append(navigation);
   section.append(list);
-  const updateControls = () => {
-    navigation.hidden = list.scrollWidth <= list.clientWidth + 2;
-    previous.disabled = list.scrollLeft <= 2;
-    next.disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 2;
-  };
-  list.addEventListener("scroll", updateControls, { passive: true });
-  list.addEventListener("keydown", (event) => {
-    if (event.target !== list || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-      event.preventDefault();
-      move(event.key === "ArrowRight" ? 1 : -1);
-    }
-  });
-  if (typeof ResizeObserver === "function") {
-    descendantsResizeObserver = new ResizeObserver(updateControls);
-    descendantsResizeObserver.observe(list);
-  }
-  requestAnimationFrame(updateControls);
+  wireProfileCarousel(list);
   return section;
 }
 
@@ -303,20 +304,13 @@ function renderAutomaticBonitation(dog, relatives = [], loading = false) {
 async function renderProfileBlocks(dog, onProgress = () => {}) {
   const token = ++profileRenderToken;
   const ownId = profileSourceId(dog);
-  const needsSourceArchive = !dog.rors && ownId && !archive && canLoadHostedArchive
-    && (!dog.sourceEvents || dog.sourceChildren === null);
-  if (needsSourceArchive && (archiveLoading || !archiveLoadAttempted)) {
-    const ready = new Promise((resolve) => document.addEventListener("profile-archive-ready", resolve, { once: true }));
-    if (!archiveLoading) void attachArchive();
-    await ready;
-    if (!archive) throw new Error("Не удалось загрузить архив с результатами собаки.");
-  }
   if (!dog.live && /^\d+$/.test(ownId)) await loadProfileChildren(dog);
+  if (token !== profileRenderToken) return;
+  const own = await readProfileSource(dog, { required: true });
   if (token !== profileRenderToken) return;
   renderBasicInformation(dog); renderProfileEvents(dog); renderProfilePedigree(dog);
   const related = [...[pedigreeForDog(dog)?.father?.dog, pedigreeForDog(dog)?.mother?.dog].filter(Boolean), ...profileChildren(dog)];
   onProgress(0.1);
-    await readProfileSource(dog);
     const relatives = [];
     let index = 0;
     const childIds = new Set(profileChildren(dog).map((child) => profileSourceId(child) || child.id));
@@ -331,5 +325,6 @@ async function renderProfileBlocks(dog, onProgress = () => {}) {
     }));
     if (token !== profileRenderToken || currentDog()?.id !== dog.id) return;
     renderBasicInformation(dog); renderProfileEvents(dog); renderAutomaticBonitation(dog, relatives);
+    if (own.partial) byId("live-profile-status").textContent = "Часть данных не удалось обновить. Показаны сохранённые сведения.";
     onProgress(1);
 }

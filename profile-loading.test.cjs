@@ -15,7 +15,7 @@ function setup(extra = {}) {
     canLoadHostedArchive: false, archiveLoading: false, archiveLoadAttempted: false,
     rorsDog: (entry) => ({ ...entry, id: String(entry.id), rors: true, live: true }), ...extra });
   vm.runInContext(fs.readFileSync(path.join(__dirname, "profile-ui.js"), "utf8"), ctx);
-  const api = vm.runInContext("({startProfileLoading, updateProfileLoading, finishProfileLoading, failProfileLoading, loadProfileChildren, profileChildren, renderProfileBlocks, profileChildrenCache})", ctx);
+  const api = vm.runInContext("({startProfileLoading, updateProfileLoading, finishProfileLoading, failProfileLoading, loadProfileChildren, profileChildren, renderProfileBlocks, profileChildrenCache, readProfileSource, profileSourceCache, profileEvents})", ctx);
   return { ctx, api, byId };
 }
 test("keeps the card hidden until loading finishes and progress never runs backwards", () => {
@@ -92,4 +92,51 @@ test("profile preparation waits for descendants before rendering its blocks", as
   assert.ok(rendered.includes("pedigree"));
   assert.ok(rendered.includes("score"));
   assert.equal(progress.at(-1), 1);
+});
+
+test("restores events for an older saved card with an incomplete snapshot", async () => {
+  const calls = [];
+  const { api } = setup({ rorsEvaluations: async (_path, key) => {
+    calls.push(key); return [{ name: key }];
+  }});
+  const dog = { id: "parent", archiveSourceId: "217310", sourceEvents: {} };
+  await api.readProfileSource(dog, { required: true });
+  assert.equal(api.profileEvents(dog).exhibition_evals.length, 1);
+  assert.equal(api.profileEvents(dog).competition_evals.length, 1);
+  await api.readProfileSource(dog, { required: true });
+  assert.equal(calls.length, 2);
+});
+test("failed events cannot be cached as successfully empty and retry recovers them", async () => {
+  let failed = true;
+  const { api } = setup({ rorsEvaluations: async () => {
+    if (failed) throw new Error("Connection failed");
+    return [{ name: "Recovered" }];
+  }});
+  const dog = { id: "parent", archiveSourceId: "217310", sourceEvents: {} };
+  await assert.rejects(api.readProfileSource(dog, { required: true }), /Не удалось загрузить/);
+  assert.equal(api.profileSourceCache.has("217310"), false);
+  failed = false;
+  await api.readProfileSource(dog, { required: true });
+  assert.equal(api.profileEvents(dog).competition_evals[0].name, "Recovered");
+});
+test("complete saved events are usable without a live connection, including truly empty lists", async () => {
+  const { api } = setup({ rorsEvaluations: async () => { throw new Error("Should not request"); } });
+  const events = { exhibition_evals: [], competition_evals: [] };
+  const result = await api.readProfileSource({ id: "parent", archiveSourceId: "217310", sourceEvents: events }, { required: true });
+  assert.equal(result.events, events);
+});
+test("a partially recovered result remains visible and is retried next time", async () => {
+  let failed = true, calls = 0;
+  const { api } = setup({ rorsEvaluations: async (_path, key) => {
+    calls++;
+    if (failed && key === "competition_evals") throw new Error("Connection failed");
+    return [{ name: key }];
+  }});
+  const dog = { id: "parent", archiveSourceId: "217310", sourceEvents: { competition_evals: [] } };
+  const first = await api.readProfileSource(dog, { required: true });
+  assert.equal(first.partial, true);
+  assert.equal(api.profileEvents(dog).exhibition_evals.length, 1);
+  failed = false;
+  assert.equal((await api.readProfileSource(dog, { required: true })).partial, false);
+  assert.equal(calls, 4);
 });

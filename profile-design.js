@@ -27,8 +27,9 @@ function profileIcon(name, css = "profile-icon") {
 
 function decorateProfileHeading(heading, icon, count) {
   if (!heading.querySelector(".profile-section-icon")) {
+    const title = node("span", heading.textContent.trim(), "profile-section-label");
     const badge = node("span", undefined, "profile-section-icon");
-    badge.append(profileIcon(icon)); heading.prepend(badge);
+    badge.append(profileIcon(icon)); heading.replaceChildren(badge, title);
   }
   if (count !== undefined) {
     let badge = heading.querySelector(".profile-section-count");
@@ -44,21 +45,13 @@ function mountProfileDesign() {
   for (const [id, icon] of [["bon-title", "award"], ["basic-title", "information"], ["pedigree-title", "pedigree"], ["exhibitions-title", "trophy"], ["trials-title", "activity"]]) decorateProfileHeading(byId(id), icon);
   for (const [id, icon] of [["edit", "pencil"], ["remove", "trash"]]) byId(id).prepend(profileIcon(icon));
   document.querySelector("#profile > .profile-back").prepend(profileIcon("list"));
-  for (const button of document.querySelectorAll(".profile-jump-nav button")) {
-    button.prepend(profileIcon(button.dataset.icon));
-    button.onclick = () => {
-      const target = byId(button.dataset.target);
-      target.scrollIntoView({ block: "start", behavior: "auto" });
-      const title = target.querySelector("h2");
-      title.tabIndex = -1; title.focus({ preventScroll: true });
-    };
-  }
 }
 
 function renderProfileIdentity(dog) {
   mountProfileDesign();
   const meta = byId("profile-meta");
-  const entries = [["paw", dog.breed], [null, labels[dog.sex]], ["document", dog.regNumber && "ВПКОС " + dog.regNumber]];
+  const entries = [["document", dog.regNumber && "ВПКОС " + dog.regNumber]];
+  meta.hidden = !dog.regNumber;
   meta.replaceChildren(...entries.filter(([, value]) => value).map(([icon, value]) => {
     const item = node("span", undefined, "profile-meta-item");
     if (icon) item.append(profileIcon(icon)); item.append(document.createTextNode(value)); return item;
